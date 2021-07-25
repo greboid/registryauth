@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/greboid/registryauth/auth"
 	"io"
 	"log"
 	"net/http"
@@ -9,17 +10,11 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
 )
-
-type customClaims struct {
-	Username string `json:"username"`
-	jwt.StandardClaims
-}
 
 func main() {
 	err := envflag.Parse()
@@ -28,25 +23,21 @@ func main() {
 	}
 	err = certs.GenerateSelfSignedCert("./data/certs")
 	if err != nil {
+		log.Fatalf("Unable to generate certificates %s", err.Error())
+	}
+	authServer := &auth.Server{}
+	err = authServer.LoadCertAndKey("./data/certs/cert.pem", "./data/certs/key.pem")
+	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
 	log.Print("Starting server.")
-	startAndWait(getRoutes())
+	startAndWait(getRoutes(authServer))
 	log.Print("Finishing server.")
 }
 
-type AuthResponse struct {
-	Token string `json:"token"`
-}
-
-func getRoutes() *mux.Router {
+func getRoutes(server *auth.Server) *mux.Router {
 	router := mux.NewRouter()
-	router.PathPrefix("/v2/token").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-	})
-	router.PathPrefix("/v2/auth").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-	})
-	router.PathPrefix("/auth").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-	})
+	router.PathPrefix("/auth").HandlerFunc(server.HandleAuth).Methods(http.MethodPost, http.MethodGet)
 	router.PathPrefix("/").Handler(registry.StartRegistry("./registry-config.yml"))
 	return router
 }
