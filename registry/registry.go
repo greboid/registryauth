@@ -2,6 +2,9 @@ package registry
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
@@ -22,8 +25,6 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/swift"
 	"github.com/distribution/distribution/v3/version"
 	_ "github.com/spf13/cobra"
-	"net/http"
-	"os"
 )
 
 func StartRegistry(configPath string) http.Handler {
@@ -31,7 +32,7 @@ func StartRegistry(configPath string) http.Handler {
 
 	config, err := resolveConfiguration([]string{configPath})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(1)
 	}
 	app := handlers.NewApp(ctx, config)
@@ -57,7 +58,9 @@ func resolveConfiguration(args []string) (*configuration.Configuration, error) {
 		return nil, err
 	}
 
-	defer fp.Close()
+	defer func() {
+		_ = fp.Close()
+	}()
 
 	config, err := configuration.Parse(fp)
 	if err != nil {
