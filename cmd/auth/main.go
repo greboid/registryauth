@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/greboid/registryauth/auth"
 	"io"
 	"log"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
@@ -67,7 +67,11 @@ func logger(next http.Handler) http.Handler {
 		log.Printf("Method: %s", request.Method)
 		log.Printf("URL: %s", request.URL)
 		log.Printf("Headers: %+v", request.Header)
-		log.Printf("Body\n%s\n", body)
+		if len(body) < 100 {
+			log.Printf("Body\n%s\n", body)
+		} else {
+			log.Printf("Body: Large body provided")
+		}
 		next.ServeHTTP(writer, request)
 	})
 }

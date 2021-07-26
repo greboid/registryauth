@@ -6,30 +6,31 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/distribution/distribution/v3/registry/auth/token"
-	"github.com/docker/libtrust"
 	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/distribution/distribution/v3/registry/auth/token"
+	"github.com/docker/libtrust"
 )
 
 type Server struct {
-	publicKey libtrust.PublicKey
+	publicKey  libtrust.PublicKey
 	privateKey libtrust.PrivateKey
 }
 
 type Request struct {
-	User string
+	User     string
 	Password string
-	Service string
-	Scope []string
+	Service  string
+	Scope    []*token.ResourceActions
 }
 
 type Response struct {
 	Success bool
-	Token string `json:"token"`
+	Token   string `json:"token"`
 }
 
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
@@ -49,10 +50,12 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
 		return
 	}
-	if len(authRequest.Scope) == 0 {
+	if len(authRequest.Scope) > 0 {
 		err = authRequest.Authorize()
-		http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusInternalServerError)
-		return
+		if err != nil {
+			http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusUnauthorized)
+			return
+		}
 	}
 	responseToken, err := authRequest.CreateToken(s)
 	if err != nil {
@@ -81,17 +84,32 @@ func (s *Server) parseRequest(request *http.Request) (*Request, error) {
 	}
 	if request.Method == http.MethodGet {
 		authRequest.Service = request.URL.Query().Get("service")
-		authRequest.Scope = s.parseScope(request.URL.Query().Get("scope"))
-	} else if request.Method == http.MethodGet {
+		authRequest.Scope = s.parseScope(strings.Join(request.URL.Query()["scope"], " "))
+	} else if request.Method == http.MethodPost {
 		authRequest.Service = request.FormValue("service")
 		authRequest.Scope = s.parseScope(request.FormValue("scope"))
 	}
 	return &authRequest, nil
 }
 
-func (s *Server) parseScope(scope string) []string {
-	log.Printf("Scope: %s", scope)
-	return []string{scope}
+func (s *Server) parseScope(scopes string) []*token.ResourceActions {
+	resourceActions := make([]*token.ResourceActions, 0)
+	scopeParts := strings.Split(scopes, " ")
+	for _, scope := range scopeParts {
+		if !strings.ContainsRune(scope, ':') {
+			continue
+		}
+		splitScope := strings.Split(scope, ":")
+		if len(splitScope) < 2 {
+			continue
+		}
+		resourceActions = append(resourceActions, &token.ResourceActions{
+			Type:    splitScope[0],
+			Name:    strings.Join(splitScope[1:len(splitScope)-1], ""),
+			Actions: strings.Split(splitScope[len(splitScope)-1], ","),
+		})
+	}
+	return resourceActions
 }
 
 func (a *Request) Authenticate() (*Response, error) {
@@ -101,7 +119,11 @@ func (a *Request) Authenticate() (*Response, error) {
 }
 
 func (a *Request) Authorize() error {
-	return nil
+	if a.Scope[0].Name == "test" {
+		return fmt.Errorf("no ACL match: %s", a.Scope[0].Name)
+	} else {
+		return nil
+	}
 }
 
 func (a *Request) CreateToken(s *Server) (string, error) {
@@ -119,7 +141,7 @@ func (a *Request) CreateToken(s *Server) (string, error) {
 		IssuedAt:   now.Unix(),
 		Expiration: now.Add(2 * time.Minute).Unix(),
 		JWTID:      fmt.Sprintf("%d", rand.Int63()),
-		Access:     []*token.ResourceActions{},
+		Access:     a.Scope,
 	}
 	headerJson, err := json.Marshal(header)
 	if err != nil {
