@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -19,7 +20,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var userInput = flag.String("users", "", "Yaml formatted list of users")
+var (
+	publicPrefixes = flag.String("public", "", "prefixes of public readable folders")
+	userInput      = flag.String("users", "", "Yaml formatted list of users")
+)
 
 func main() {
 	err := envflag.Parse()
@@ -30,12 +34,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse users: %s", err.Error())
 	}
+	prefixList, err := parsePrefixes(*publicPrefixes)
+	if err != nil {
+		log.Fatalf("Unable to parse prefixes %s", err.Error())
+	}
 	err = certs.GenerateSelfSignedCert("./data/certs")
 	if err != nil {
 		log.Fatalf("Unable to generate certificates %s", err.Error())
 	}
 	authServer := &auth.Server{
 		Users: userList,
+		PublicPrefixes: prefixList,
 	}
 	err = authServer.LoadCertAndKey("./data/certs/cert.pem", "./data/certs/key.pem")
 	if err != nil {
@@ -44,6 +53,14 @@ func main() {
 	log.Print("Starting server.")
 	startAndWait(getRoutes(authServer))
 	log.Print("Finishing server.")
+}
+
+func parsePrefixes(prefixInput string) ([]string, error) {
+	var prefixList []string
+	for _, prefix := range strings.Split(prefixInput, ",") {
+		prefixList = append(prefixList, prefix)
+	}
+	return prefixList, nil
 }
 
 func parseUsers(userInput string) (map[string]string, error) {

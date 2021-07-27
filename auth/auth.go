@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -18,9 +19,10 @@ import (
 )
 
 type Server struct {
-	publicKey  libtrust.PublicKey
-	privateKey libtrust.PrivateKey
-	Users      map[string]string
+	publicKey      libtrust.PublicKey
+	privateKey     libtrust.PrivateKey
+	Users          map[string]string
+	PublicPrefixes []string
 }
 
 type Request struct {
@@ -43,7 +45,7 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	}
 	authResponse, err := s.Authenticate(authRequest)
 	if err != nil {
-		http.Error(writer, fmt.Sprintf("Authentication failed (%s)", err), http.StatusUnauthorized)
+		http.Error(writer, fmt.Sprintf("Authentication failed (%s)", err), http.StatusInternalServerError)
 		return
 	}
 	if !authResponse.Success {
@@ -121,11 +123,13 @@ func (s *Server) Authenticate(request *Request) (authResponse *Response, err err
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password))
-	if err != nil {
-		log.Printf("Error: %s", err)
+	if err == nil {
+		authResponse.Success = true
 		return
 	}
-	authResponse.Success = true
+	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+		err = nil
+	}
 	return
 }
 
