@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"io"
 	"log"
 	"net/http"
@@ -9,23 +10,33 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
+	"gopkg.in/yaml.v2"
 )
+
+var userInput = flag.String("users", "", "Yaml formatted list of users")
 
 func main() {
 	err := envflag.Parse()
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
+	userList, err := parseUsers(*userInput)
+	if err != nil {
+		log.Fatalf("Unable to parse users: %s", err.Error())
+	}
 	err = certs.GenerateSelfSignedCert("./data/certs")
 	if err != nil {
 		log.Fatalf("Unable to generate certificates %s", err.Error())
 	}
-	authServer := &auth.Server{}
+	authServer := &auth.Server{
+		Users: userList,
+	}
 	err = authServer.LoadCertAndKey("./data/certs/cert.pem", "./data/certs/key.pem")
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
@@ -33,6 +44,15 @@ func main() {
 	log.Print("Starting server.")
 	startAndWait(getRoutes(authServer))
 	log.Print("Finishing server.")
+}
+
+func parseUsers(userInput string) (map[string]string, error) {
+	userList := map[string]string{}
+	err := yaml.Unmarshal([]byte(userInput), userList)
+	if err != nil {
+		return nil, err
+	}
+	return userList, nil
 }
 
 func getRoutes(server *auth.Server) *mux.Router {
@@ -45,7 +65,7 @@ func getRoutes(server *auth.Server) *mux.Router {
 func startAndWait(router *mux.Router) {
 	server := http.Server{
 		Addr:    ":8080",
-		Handler: logger(router),
+		Handler: handlers.RecoveryHandler()(logger(router)),
 	}
 	go func() {
 		_ = server.ListenAndServeTLS("./data/certs/cert.pem", "./data/certs/key.pem")

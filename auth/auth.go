@@ -14,11 +14,13 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/docker/libtrust"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Server struct {
 	publicKey  libtrust.PublicKey
 	privateKey libtrust.PrivateKey
+	Users      map[string]string
 }
 
 type Request struct {
@@ -39,9 +41,9 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "Unable to parse auth", http.StatusBadRequest)
 		return
 	}
-	authResponse, err := authRequest.Authenticate()
+	authResponse, err := s.Authenticate(authRequest)
 	if err != nil {
-		http.Error(writer, fmt.Sprintf("Authentication failed (%s)", err), http.StatusInternalServerError)
+		http.Error(writer, fmt.Sprintf("Authentication failed (%s)", err), http.StatusUnauthorized)
 		return
 	}
 	if !authResponse.Success {
@@ -51,13 +53,13 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if len(authRequest.Scope) > 0 {
-		err = authRequest.Authorize()
+		err = s.Authorize(authRequest)
 		if err != nil {
 			http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusUnauthorized)
 			return
 		}
 	}
-	responseToken, err := authRequest.CreateToken(s)
+	responseToken, err := s.CreateToken(authRequest)
 	if err != nil {
 		log.Printf("Unable to create token: %s", err)
 		http.Error(writer, "Unable to create token", http.StatusInternalServerError)
@@ -112,21 +114,30 @@ func (s *Server) parseScope(scopes string) []*token.ResourceActions {
 	return resourceActions
 }
 
-func (a *Request) Authenticate() (*Response, error) {
-	authResponse := Response{}
+func (s *Server) Authenticate(request *Request) (authResponse *Response, err error) {
+	authResponse = &Response{}
+	password, ok := s.Users[request.User]
+	if !ok {
+		return
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password))
+	if err != nil {
+		log.Printf("Error: %s", err)
+		return
+	}
 	authResponse.Success = true
-	return &authResponse, nil
+	return
 }
 
-func (a *Request) Authorize() error {
-	if a.Scope[0].Name == "test" {
-		return fmt.Errorf("no ACL match: %s", a.Scope[0].Name)
+func (s *Server) Authorize(request *Request) error {
+	if request.Scope[0].Name == "test" {
+		return fmt.Errorf("no ACL match: %s", request.Scope[0].Name)
 	} else {
 		return nil
 	}
 }
 
-func (a *Request) CreateToken(s *Server) (string, error) {
+func (s *Server) CreateToken(request *Request) (string, error) {
 	now := time.Now()
 	header := token.Header{
 		Type:       "JWT",
@@ -135,13 +146,13 @@ func (a *Request) CreateToken(s *Server) (string, error) {
 	}
 	claims := token.ClaimSet{
 		Issuer:     "HGHGHGHG",
-		Subject:    a.User,
-		Audience:   a.Service,
+		Subject:    request.User,
+		Audience:   request.Service,
 		NotBefore:  now.Add(-1 * time.Minute).Unix(),
 		IssuedAt:   now.Unix(),
 		Expiration: now.Add(2 * time.Minute).Unix(),
 		JWTID:      fmt.Sprintf("%d", rand.Int63()),
-		Access:     a.Scope,
+		Access:     request.Scope,
 	}
 	headerJson, err := json.Marshal(header)
 	if err != nil {
