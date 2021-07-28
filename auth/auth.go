@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -26,10 +25,12 @@ type Server struct {
 }
 
 type Request struct {
-	User     string
-	Password string
-	Service  string
-	Scope    []*token.ResourceActions
+	User             string
+	Password         string
+	Service          string
+	ApprovedScope    []*token.ResourceActions
+	RequestedScope   []*token.ResourceActions
+	validCredentials bool
 }
 
 type Response struct {
@@ -43,23 +44,20 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "Unable to parse auth", http.StatusBadRequest)
 		return
 	}
-	authResponse, err := s.Authenticate(authRequest)
-	if err != nil {
-		http.Error(writer, fmt.Sprintf("Authentication failed (%s)", err), http.StatusInternalServerError)
-		return
-	}
-	if !authResponse.Success {
-		log.Printf("Auth failed: %+v", authResponse)
+	authRequest.validCredentials = s.Authenticate(authRequest)
+	if !authRequest.validCredentials {
+		log.Printf("Auth failed: %+v", authRequest.User)
 		writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "HGHGHGHG"))
 		http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
 		return
 	}
-	if len(authRequest.Scope) > 0 {
-		err = s.Authorize(authRequest)
+	if len(authRequest.RequestedScope) > 0 {
+		approvedScope, err := s.Authorize(authRequest)
 		if err != nil {
 			http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusUnauthorized)
 			return
 		}
+		authRequest.ApprovedScope = approvedScope
 	}
 	responseToken, err := s.CreateToken(authRequest)
 	if err != nil {
@@ -88,10 +86,10 @@ func (s *Server) parseRequest(request *http.Request) (*Request, error) {
 	}
 	if request.Method == http.MethodGet {
 		authRequest.Service = request.URL.Query().Get("service")
-		authRequest.Scope = s.parseScope(strings.Join(request.URL.Query()["scope"], " "))
+		authRequest.RequestedScope = s.parseScope(strings.Join(request.URL.Query()["scope"], " "))
 	} else if request.Method == http.MethodPost {
 		authRequest.Service = request.FormValue("service")
-		authRequest.Scope = s.parseScope(request.FormValue("scope"))
+		authRequest.RequestedScope = s.parseScope(request.FormValue("scope"))
 	}
 	return &authRequest, nil
 }
@@ -116,29 +114,38 @@ func (s *Server) parseScope(scopes string) []*token.ResourceActions {
 	return resourceActions
 }
 
-func (s *Server) Authenticate(request *Request) (authResponse *Response, err error) {
-	authResponse = &Response{}
+func (s *Server) Authenticate(request *Request) bool {
 	password, ok := s.Users[request.User]
 	if !ok {
-		return
+		return false
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password))
-	if err == nil {
-		authResponse.Success = true
-		return
-	}
-	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		err = nil
-	}
-	return
+	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func (s *Server) Authorize(request *Request) error {
-	if request.Scope[0].Name == "test" {
-		return fmt.Errorf("no ACL match: %s", request.Scope[0].Name)
-	} else {
-		return nil
+func ScopeContains(list []*token.ResourceActions, item *token.ResourceActions) bool {
+	for _, listItem := range list {
+		if listItem == item {
+			return true
+		}
 	}
+	return false
+}
+
+func (s *Server) Authorize(request *Request) ([]*token.ResourceActions, error) {
+	approvedScopes := make([]*token.ResourceActions, 0)
+	for _, scopeItem := range request.RequestedScope {
+		for _, publicPrefix := range s.PublicPrefixes {
+			if strings.HasPrefix(scopeItem.Name, publicPrefix) {
+				approvedScopes = append(approvedScopes, scopeItem)
+			}
+		}
+		if request.validCredentials {
+			if !ScopeContains(approvedScopes, scopeItem) {
+				approvedScopes = append(approvedScopes, scopeItem)
+			}
+		}
+	}
+	return approvedScopes, nil
 }
 
 func (s *Server) CreateToken(request *Request) (string, error) {
@@ -156,7 +163,7 @@ func (s *Server) CreateToken(request *Request) (string, error) {
 		IssuedAt:   now.Unix(),
 		Expiration: now.Add(2 * time.Minute).Unix(),
 		JWTID:      fmt.Sprintf("%d", rand.Int63()),
-		Access:     request.Scope,
+		Access:     request.ApprovedScope,
 	}
 	headerJson, err := json.Marshal(header)
 	if err != nil {

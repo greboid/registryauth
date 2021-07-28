@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("Unable to generate certificates %s", err.Error())
 	}
 	authServer := &auth.Server{
-		Users: userList,
+		Users:          userList,
 		PublicPrefixes: prefixList,
 	}
 	err = authServer.LoadCertAndKey("./data/certs/cert.pem", "./data/certs/key.pem")
