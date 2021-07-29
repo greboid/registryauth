@@ -92,7 +92,7 @@ func getRoutes(server *auth.Server) *mux.Router {
 
 func startAndWait(router *mux.Router) {
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", serverPort),
+		Addr:    fmt.Sprintf(":%d", *serverPort),
 		Handler: handlers.RecoveryHandler()(router),
 	}
 	go func() {
