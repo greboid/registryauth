@@ -1,9 +1,10 @@
 package auth
 
 import (
-	"github.com/distribution/distribution/v3/registry/auth/token"
 	"reflect"
 	"testing"
+
+	"github.com/distribution/distribution/v3/registry/auth/token"
 )
 
 func TestServer_Authorize(t *testing.T) {

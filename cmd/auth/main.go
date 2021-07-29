@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
@@ -36,7 +36,7 @@ var (
 	certDirectory     = flag.String("cert-dir", filepath.Join(*dataDirectory, "certs"), "Certificate directory")
 	certPath          = filepath.Join(*certDirectory, "cert.pem")
 	keyPath           = filepath.Join(*certDirectory, "key.pem")
-	genPass            = flag.Bool("gen-pass", false, "Used to generate a password")
+	genPass           = flag.Bool("gen-pass", false, "Used to generate a password")
 )
 
 func main() {

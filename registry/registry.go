@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"net/http"
+
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"
@@ -20,7 +22,6 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/swift"
 	"github.com/distribution/distribution/v3/version"
 	_ "github.com/spf13/cobra"
-	"net/http"
 )
 
 func StartRegistry(directory string, realm string, issuer string, service string, cert string) http.Handler {
