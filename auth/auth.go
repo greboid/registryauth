@@ -46,9 +46,6 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	authRequest.validCredentials = s.Authenticate(authRequest)
-	if !authRequest.validCredentials {
-
-	}
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.Authorize(authRequest)
 		if err != nil {
