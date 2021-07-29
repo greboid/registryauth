@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -75,14 +74,14 @@ func parseUsers(userInput string) (map[string]string, error) {
 func getRoutes(server *auth.Server) *mux.Router {
 	router := mux.NewRouter()
 	router.PathPrefix("/auth").HandlerFunc(server.HandleAuth).Methods(http.MethodPost, http.MethodGet)
-	router.PathPrefix("/").Handler(registry.StartRegistry("./registry-config.yml"))
+	router.PathPrefix("/").Handler(registry.StartRegistry())
 	return router
 }
 
 func startAndWait(router *mux.Router) {
 	server := http.Server{
 		Addr:    ":8080",
-		Handler: handlers.RecoveryHandler()(logger(router)),
+		Handler: handlers.RecoveryHandler()(router),
 	}
 	go func() {
 		_ = server.ListenAndServeTLS("./data/certs/cert.pem", "./data/certs/key.pem")
@@ -95,20 +94,4 @@ func startAndWait(router *mux.Router) {
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Unable to shutdown: %s", err.Error())
 	}
-}
-
-func logger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		defer func() { _ = request.Body.Close() }()
-		body, _ := io.ReadAll(request.Body)
-		log.Printf("Method: %s", request.Method)
-		log.Printf("URL: %s", request.URL)
-		log.Printf("Headers: %+v", request.Header)
-		if len(body) < 100 {
-			log.Printf("Body\n%s\n", body)
-		} else {
-			log.Printf("Body: Large body provided")
-		}
-		next.ServeHTTP(writer, request)
-	})
 }

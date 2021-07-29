@@ -1,13 +1,8 @@
 package registry
 
 import (
-	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/health"
 	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"
 	_ "github.com/distribution/distribution/v3/registry/auth/silly"
 	_ "github.com/distribution/distribution/v3/registry/auth/token"
@@ -25,47 +20,24 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/swift"
 	"github.com/distribution/distribution/v3/version"
 	_ "github.com/spf13/cobra"
+	"net/http"
 )
 
-func StartRegistry(configPath string) http.Handler {
-	ctx := dcontext.WithVersion(dcontext.Background(), version.Version)
-
-	config, err := resolveConfiguration([]string{configPath})
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
-		os.Exit(1)
-	}
-	app := handlers.NewApp(ctx, config)
-	app.RegisterHealthChecks()
-	return health.Handler(app)
-}
-
-func resolveConfiguration(args []string) (*configuration.Configuration, error) {
-	var configurationPath string
-
-	if len(args) > 0 {
-		configurationPath = args[0]
-	} else if os.Getenv("REGISTRY_CONFIGURATION_PATH") != "" {
-		configurationPath = os.Getenv("REGISTRY_CONFIGURATION_PATH")
-	}
-
-	if configurationPath == "" {
-		return nil, fmt.Errorf("configuration path unspecified")
-	}
-
-	fp, err := os.Open(configurationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		_ = fp.Close()
-	}()
-
-	config, err := configuration.Parse(fp)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing %s: %v", configurationPath, err)
-	}
-
-	return config, nil
+func StartRegistry() http.Handler {
+	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), &configuration.Configuration{
+		Storage: configuration.Storage{
+			"filesystem": configuration.Parameters{
+				"rootdirectory": "./data/registry",
+			},
+		},
+		Auth: configuration.Auth{
+			"token": {
+				"autoredirect":   true,
+				"realm": "FGFGFG",
+				"issuer": "HGHGHGHG",
+				"service": "JHJHJHJHJH",
+				"rootcertbundle": "./data/certs/cert.pem",
+			},
+		},
+	})
 }
