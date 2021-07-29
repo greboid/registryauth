@@ -41,11 +41,11 @@ func main() {
 		Port:           *serverPort,
 		Router:         mux.NewRouter(),
 	}
-	authServer.Router.PathPrefix("/").Handler(registry.StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
 	err = authServer.Initialise()
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
+	authServer.Router.PathPrefix("/").Handler(registry.StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
 	log.Print("Starting server.")
 	authServer.StartAndWait()
 	log.Print("Finishing server.")
