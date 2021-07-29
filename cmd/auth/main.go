@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -18,6 +20,7 @@ import (
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
 
@@ -33,12 +36,17 @@ var (
 	certDirectory     = flag.String("cert-dir", filepath.Join(*dataDirectory, "certs"), "Certificate directory")
 	certPath          = filepath.Join(*certDirectory, "cert.pem")
 	keyPath           = filepath.Join(*certDirectory, "key.pem")
+	genPass            = flag.Bool("gen-pass", false, "Used to generate a password")
 )
 
 func main() {
 	err := envflag.Parse()
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
+	}
+	if *genPass {
+		generatePassword()
+		return
 	}
 	userList, err := parseUsers(*userInput)
 	if err != nil {
@@ -64,6 +72,20 @@ func main() {
 	log.Print("Starting server.")
 	startAndWait(getRoutes(authServer))
 	log.Print("Finishing server.")
+}
+
+func generatePassword() {
+	fmt.Print("Enter Password: ")
+	bytePassword, err := term.ReadPassword(syscall.Stdin)
+	if err != nil {
+		log.Printf("Unable to read password.")
+	}
+	bytePassword, err = bcrypt.GenerateFromPassword(bytePassword, 7)
+	if err != nil {
+		log.Printf("Unable to generate password: %s", err)
+	}
+	fmt.Println()
+	fmt.Printf("%s\n", bytePassword)
 }
 
 func parsePrefixes(prefixInput string) ([]string, error) {
