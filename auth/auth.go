@@ -17,14 +17,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Server struct {
-	publicKey      libtrust.PublicKey
-	privateKey     libtrust.PrivateKey
-	Users          map[string]string
-	PublicPrefixes []string
-	Issuer         string
-}
-
 type Request struct {
 	User             string
 	Password         string

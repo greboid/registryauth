@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func GenerateSelfSignedCert(directory string) error {
+func GenerateSelfSignedCert(certPath string, keyPath string) error {
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return err
@@ -47,17 +47,19 @@ func GenerateSelfSignedCert(directory string) error {
 	if err != nil {
 		return err
 	}
-	certFile := filepath.Join(directory, "cert.pem")
-	keyFile := filepath.Join(directory, "key.pem")
-	err = os.MkdirAll(directory, 0700)
+	err = os.MkdirAll(filepath.Base(certPath), 0700)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(certFile, certPEM.Bytes(), 0600)
+	err = os.MkdirAll(filepath.Base(keyPath), 0700)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(keyFile, certPrivKeyPEM.Bytes(), 0600)
+	err = os.WriteFile(certPath, certPEM.Bytes(), 0600)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(keyPath, certPrivKeyPEM.Bytes(), 0600)
 	if err != nil {
 		return err
 	}
