@@ -33,9 +33,9 @@ func StartRegistry(directory string, realm string, issuer string, service string
 		Auth: configuration.Auth{
 			"token": {
 				"autoredirect":   true,
-				"realm": realm,
-				"issuer": issuer,
-				"service": service,
+				"realm":          realm,
+				"issuer":         issuer,
+				"service":        service,
 				"rootcertbundle": cert,
 			},
 		},

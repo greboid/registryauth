@@ -15,10 +15,10 @@ func TestServer_Authorize(t *testing.T) {
 		wantErr            bool
 	}{
 		{
-			name:               "ValidAuth-WantTest-IsPublic",
-			publicPrefixes:     []string{"test"},
-			request:            &Request{
-				User:             "greboid",
+			name:           "ValidAuth-WantTest-IsPublic",
+			publicPrefixes: []string{"test"},
+			request: &Request{
+				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
 						Type:    "",
@@ -37,14 +37,14 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr:            false,
+			wantErr: false,
 		},
 		{
-			name:               "InvalidAuth-WantTest-IsPublic-Push",
-			publicPrefixes:     []string{"test"},
-			request:            &Request{
-				User:             "greboid",
-				RequestedScope:   []*token.ResourceActions{
+			name:           "InvalidAuth-WantTest-IsPublic-Push",
+			publicPrefixes: []string{"test"},
+			request: &Request{
+				User: "greboid",
+				RequestedScope: []*token.ResourceActions{
 					{
 						Type:    "",
 						Class:   "",
@@ -62,14 +62,14 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr:            false,
+			wantErr: false,
 		},
 		{
-			name:               "InvalidAuth-WantTest-IsPublic-Pull",
-			publicPrefixes:     []string{"test"},
-			request:            &Request{
-				User:             "greboid",
-				RequestedScope:   []*token.ResourceActions{
+			name:           "InvalidAuth-WantTest-IsPublic-Pull",
+			publicPrefixes: []string{"test"},
+			request: &Request{
+				User: "greboid",
+				RequestedScope: []*token.ResourceActions{
 					{
 						Type:    "",
 						Class:   "",
@@ -87,14 +87,14 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr:            false,
+			wantErr: false,
 		},
 		{
-			name:               "ValidAuth-WantTest-NotPublic",
-			publicPrefixes:     []string{},
-			request:            &Request{
-				User:             "greboid",
-				RequestedScope:   []*token.ResourceActions{
+			name:           "ValidAuth-WantTest-NotPublic",
+			publicPrefixes: []string{},
+			request: &Request{
+				User: "greboid",
+				RequestedScope: []*token.ResourceActions{
 					{
 						Type:    "",
 						Class:   "",
@@ -112,14 +112,14 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr:            false,
+			wantErr: false,
 		},
 		{
-			name:               "InvalidAuth-WantTest-NotPublic",
-			publicPrefixes:     []string{},
-			request:            &Request{
-				User:             "greboid",
-				RequestedScope:   []*token.ResourceActions{
+			name:           "InvalidAuth-WantTest-NotPublic",
+			publicPrefixes: []string{},
+			request: &Request{
+				User: "greboid",
+				RequestedScope: []*token.ResourceActions{
 					{
 						Type:    "",
 						Class:   "",

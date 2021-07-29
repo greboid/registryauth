@@ -22,17 +22,17 @@ import (
 )
 
 var (
-	publicPrefixes = flag.String("public", "", "prefixes of public readable folders")
-	userInput      = flag.String("users", "", "Yaml formatted list of users")
-	serverPort = flag.Int("port", 8080, "Port for the server to listen on")
-	realm = "FGFGFG"
-	issuer = "HGHGHGHG"
-	service = "JHJHJHJHJH"
-	dataDirectory = filepath.Join(".", "data")
+	publicPrefixes    = flag.String("public", "", "prefixes of public readable folders")
+	userInput         = flag.String("users", "", "Yaml formatted list of users")
+	serverPort        = flag.Int("port", 8080, "Port for the server to listen on")
+	realm             = "FGFGFG"
+	issuer            = "HGHGHGHG"
+	service           = "JHJHJHJHJH"
+	dataDirectory     = filepath.Join(".", "data")
 	registryDirectory = filepath.Join(dataDirectory, "registry")
-	certDirectory = filepath.Join(dataDirectory, "certs")
-	certPath = filepath.Join(certDirectory, "cert.pem")
-	keyPath = filepath.Join(certDirectory, "key.pem")
+	certDirectory     = filepath.Join(dataDirectory, "certs")
+	certPath          = filepath.Join(certDirectory, "cert.pem")
+	keyPath           = filepath.Join(certDirectory, "key.pem")
 )
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 	authServer := &auth.Server{
 		Users:          userList,
 		PublicPrefixes: prefixList,
-		Issuer: issuer,
+		Issuer:         issuer,
 	}
 	err = authServer.LoadCertAndKey(certPath, keyPath)
 	if err != nil {
