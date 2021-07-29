@@ -7,7 +7,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
-	"github.com/greboid/registryauth/registry"
 	"github.com/kouhin/envflag"
 )
 
@@ -45,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
-	authServer.Router.PathPrefix("/").Handler(registry.StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
+	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
 	log.Print("Starting server.")
 	authServer.StartAndWait()
 	log.Print("Finishing server.")
