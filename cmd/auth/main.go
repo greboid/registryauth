@@ -25,14 +25,14 @@ var (
 	publicPrefixes    = flag.String("public", "", "prefixes of public readable folders")
 	userInput         = flag.String("users", "", "Yaml formatted list of users")
 	serverPort        = flag.Int("port", 8080, "Port for the server to listen on")
-	realm             = "FGFGFG"
-	issuer            = "HGHGHGHG"
-	service           = "JHJHJHJHJH"
-	dataDirectory     = filepath.Join(".", "data")
-	registryDirectory = filepath.Join(dataDirectory, "registry")
-	certDirectory     = filepath.Join(dataDirectory, "certs")
-	certPath          = filepath.Join(certDirectory, "cert.pem")
-	keyPath           = filepath.Join(certDirectory, "key.pem")
+	realm             = flag.String("realm", "Registry", "Realm for the registry")
+	issuer            = flag.String("issuer", "Registry", "Issuer for the registry")
+	service           = flag.String("service", "Registry", "Service name for the registry")
+	dataDirectory     = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
+	registryDirectory = flag.String("registry-dir", filepath.Join(*dataDirectory, "registry"), "Registry data directory")
+	certDirectory     = flag.String("cert-dir", filepath.Join(*dataDirectory, "certs"), "Certificate directory")
+	certPath          = filepath.Join(*certDirectory, "cert.pem")
+	keyPath           = filepath.Join(*certDirectory, "key.pem")
 )
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 	authServer := &auth.Server{
 		Users:          userList,
 		PublicPrefixes: prefixList,
-		Issuer:         issuer,
+		Issuer:         *issuer,
 	}
 	err = authServer.LoadCertAndKey(certPath, keyPath)
 	if err != nil {
@@ -86,7 +86,7 @@ func parseUsers(userInput string) (map[string]string, error) {
 func getRoutes(server *auth.Server) *mux.Router {
 	router := mux.NewRouter()
 	router.PathPrefix("/auth").HandlerFunc(server.HandleAuth).Methods(http.MethodPost, http.MethodGet)
-	router.PathPrefix("/").Handler(registry.StartRegistry(registryDirectory, realm, issuer, service, certPath))
+	router.PathPrefix("/").Handler(registry.StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
 	return router
 }
 
