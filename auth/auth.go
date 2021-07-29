@@ -131,12 +131,38 @@ func ScopeContains(list []*token.ResourceActions, item *token.ResourceActions) b
 	return false
 }
 
+func stringSliceContains(list []string, item string) bool {
+	for index := range list {
+		if list[index] == item {
+			return true
+		}
+	}
+	return false
+}
+
+func ScopeHasWrite(item *token.ResourceActions) bool {
+	return stringSliceContains(item.Actions, "push")
+}
+
+func ScopeOnlyPull(item *token.ResourceActions) *token.ResourceActions {
+	return &token.ResourceActions{
+		Type:    item.Type,
+		Class:   item.Class,
+		Name:    item.Name,
+		Actions: []string{"pull"},
+	}
+}
+
 func (s *Server) Authorize(request *Request) ([]*token.ResourceActions, error) {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
 		for _, publicPrefix := range s.PublicPrefixes {
 			if strings.HasPrefix(scopeItem.Name, publicPrefix) {
-				approvedScopes = append(approvedScopes, scopeItem)
+				if ScopeHasWrite(scopeItem) {
+					approvedScopes = append(approvedScopes, ScopeOnlyPull(scopeItem))
+				} else {
+					approvedScopes = append(approvedScopes, scopeItem)
+				}
 			}
 		}
 		if request.validCredentials {
