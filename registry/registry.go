@@ -23,20 +23,20 @@ import (
 	"net/http"
 )
 
-func StartRegistry() http.Handler {
+func StartRegistry(directory string, realm string, issuer string, service string, cert string) http.Handler {
 	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), &configuration.Configuration{
 		Storage: configuration.Storage{
 			"filesystem": configuration.Parameters{
-				"rootdirectory": "./data/registry",
+				"rootdirectory": directory,
 			},
 		},
 		Auth: configuration.Auth{
 			"token": {
 				"autoredirect":   true,
-				"realm": "FGFGFG",
-				"issuer": "HGHGHGHG",
-				"service": "JHJHJHJHJH",
-				"rootcertbundle": "./data/certs/cert.pem",
+				"realm": realm,
+				"issuer": issuer,
+				"service": service,
+				"rootcertbundle": cert,
 			},
 		},
 	})

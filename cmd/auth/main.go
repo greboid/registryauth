@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,6 +24,15 @@ import (
 var (
 	publicPrefixes = flag.String("public", "", "prefixes of public readable folders")
 	userInput      = flag.String("users", "", "Yaml formatted list of users")
+	serverPort = flag.Int("port", 8080, "Port for the server to listen on")
+	realm = "FGFGFG"
+	issuer = "HGHGHGHG"
+	service = "JHJHJHJHJH"
+	dataDirectory = filepath.Join(".", "data")
+	registryDirectory = filepath.Join(dataDirectory, "registry")
+	certDirectory = filepath.Join(dataDirectory, "certs")
+	certPath = filepath.Join(certDirectory, "cert.pem")
+	keyPath = filepath.Join(certDirectory, "key.pem")
 )
 
 func main() {
@@ -44,8 +55,9 @@ func main() {
 	authServer := &auth.Server{
 		Users:          userList,
 		PublicPrefixes: prefixList,
+		Issuer: issuer,
 	}
-	err = authServer.LoadCertAndKey("./data/certs/cert.pem", "./data/certs/key.pem")
+	err = authServer.LoadCertAndKey(certPath, keyPath)
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
@@ -74,17 +86,17 @@ func parseUsers(userInput string) (map[string]string, error) {
 func getRoutes(server *auth.Server) *mux.Router {
 	router := mux.NewRouter()
 	router.PathPrefix("/auth").HandlerFunc(server.HandleAuth).Methods(http.MethodPost, http.MethodGet)
-	router.PathPrefix("/").Handler(registry.StartRegistry())
+	router.PathPrefix("/").Handler(registry.StartRegistry(registryDirectory, realm, issuer, service, certPath))
 	return router
 }
 
 func startAndWait(router *mux.Router) {
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", serverPort),
 		Handler: handlers.RecoveryHandler()(router),
 	}
 	go func() {
-		_ = server.ListenAndServeTLS("./data/certs/cert.pem", "./data/certs/key.pem")
+		_ = server.ListenAndServeTLS(certPath, keyPath)
 	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)

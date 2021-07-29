@@ -22,6 +22,7 @@ type Server struct {
 	privateKey     libtrust.PrivateKey
 	Users          map[string]string
 	PublicPrefixes []string
+	Issuer         string
 }
 
 type Request struct {
@@ -182,7 +183,7 @@ func (s *Server) CreateToken(request *Request) (string, error) {
 		KeyID:      s.publicKey.KeyID(),
 	}
 	claims := token.ClaimSet{
-		Issuer:     "HGHGHGHG",
+		Issuer:     s.Issuer,
 		Subject:    request.User,
 		Audience:   request.Service,
 		NotBefore:  now.Add(-1 * time.Minute).Unix(),
