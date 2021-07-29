@@ -47,10 +47,7 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	}
 	authRequest.validCredentials = s.Authenticate(authRequest)
 	if !authRequest.validCredentials {
-		log.Printf("Auth failed: %+v", authRequest.User)
-		writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "HGHGHGHG"))
-		http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
-		return
+
 	}
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.Authorize(authRequest)
@@ -59,6 +56,12 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		authRequest.ApprovedScope = approvedScope
+	} else {
+		if !authRequest.validCredentials {
+			writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "HGHGHGHG"))
+			http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
+			return
+		}
 	}
 	responseToken, err := s.CreateToken(authRequest)
 	if err != nil {
