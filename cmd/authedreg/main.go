@@ -20,6 +20,7 @@ var (
 	dataDirectory     = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
 	registryDirectory = flag.String("registry-dir", filepath.Join(*dataDirectory, "registry"), "Registry data directory")
 	certDirectory     = flag.String("cert-dir", filepath.Join(*dataDirectory, "certs"), "Certificate directory")
+	debug             = flag.Bool("debug", false, "Show debug logging")
 	certPath          = filepath.Join(*certDirectory, "cert.pem")
 	keyPath           = filepath.Join(*certDirectory, "key.pem")
 )
@@ -29,8 +30,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.ErrorLevel)
+	}
+	log.SetFormatter(auth.Formatter{})
+	users, err := auth.ParseUsers(*userInput)
+	if err != nil {
+		log.Fatalf("Unable to parse users: %s", err)
+	}
 	authServer := &auth.Server{
-		Users:          auth.ParseUsers(*userInput),
+		Users:          users,
 		PublicPrefixes: auth.ParsePrefixes(*publicPrefixes),
 		Issuer:         *issuer,
 		Realm:          *realm,
@@ -45,7 +56,11 @@ func main() {
 		log.Fatalf("Unable to %s", err.Error())
 	}
 	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
-	log.Print("Starting server.")
-	authServer.StartAndWait()
-	log.Print("Finishing server.")
+	log.Infof("Server started")
+	err = authServer.StartAndWait()
+	if err != nil {
+		log.Infof("Server ended: %s", err)
+	} else {
+		log.Infof("server ended")
+	}
 }

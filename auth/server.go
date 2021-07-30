@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -45,7 +44,7 @@ func (s *Server) Initialise() error {
 	return nil
 }
 
-func (s *Server) StartAndWait() {
+func (s *Server) StartAndWait() error {
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", s.Port),
 		Handler: handlers.RecoveryHandler()(s.Router),
@@ -59,8 +58,9 @@ func (s *Server) StartAndWait() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Unable to shutdown: %s", err.Error())
+		return err
 	}
+	return nil
 }
 
 func ParsePrefixes(prefixInput string) []string {
@@ -71,12 +71,11 @@ func ParsePrefixes(prefixInput string) []string {
 	return prefixList
 }
 
-func ParseUsers(userInput string) map[string]string {
+func ParseUsers(userInput string) (map[string]string, error) {
 	userList := map[string]string{}
 	err := yaml.Unmarshal([]byte(userInput), userList)
 	if err != nil {
-		log.Printf("Unable to parse users: %s", err.Error())
-		return map[string]string{}
+		return nil, err
 	}
-	return userList
+	return userList, nil
 }

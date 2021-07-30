@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/docker/libtrust"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -41,12 +41,14 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.Authorize(authRequest)
 		if err != nil {
+			log.Infof("Authorize failed: %s", err)
 			http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusUnauthorized)
 			return
 		}
 		authRequest.ApprovedScope = approvedScope
 	} else {
 		if !authRequest.validCredentials {
+			log.Infof("Authenticate failed: %s", authRequest.User)
 			writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "HGHGHGHG"))
 			http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
 			return
@@ -54,7 +56,7 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	}
 	responseToken, err := s.CreateToken(authRequest)
 	if err != nil {
-		log.Printf("Unable to create token: %s", err)
+		log.Errorf("Unable to create token: %s", err)
 		http.Error(writer, "Unable to create token", http.StatusInternalServerError)
 		return
 	}

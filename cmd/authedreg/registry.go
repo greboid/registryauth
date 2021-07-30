@@ -13,7 +13,6 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/version"
-	log "github.com/sirupsen/logrus"
 	_ "github.com/spf13/cobra"
 )
 
@@ -35,13 +34,5 @@ func StartRegistry(directory string, realm string, issuer string, service string
 		},
 	}
 	config.HTTP.Secret = fmt.Sprintf("%d", rand.Int63())
-	//log.SetLevel(log.ErrorLevel)
-	log.SetFormatter(Formatter{})
 	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
-}
-
-type Formatter struct{}
-
-func (f Formatter) Format(entry *log.Entry) ([]byte, error) {
-	return []byte(fmt.Sprintf("%s %s: %s\n", entry.Time.Format("2006/01/02 15:04:05"), entry.Level, entry.Message)), nil
 }
