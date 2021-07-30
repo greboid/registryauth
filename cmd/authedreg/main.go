@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
-	"log"
 	"path/filepath"
 
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/kouhin/envflag"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
