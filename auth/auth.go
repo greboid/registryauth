@@ -102,7 +102,7 @@ func (s *Server) parseScope(scopes string) []*token.ResourceActions {
 		}
 		resourceActions = append(resourceActions, &token.ResourceActions{
 			Type:    splitScope[0],
-			Name:    strings.Join(splitScope[1:len(splitScope)-1], ""),
+			Name:    strings.Join(splitScope[1:len(splitScope)-1], ":"),
 			Actions: strings.Split(splitScope[len(splitScope)-1], ","),
 		})
 	}
