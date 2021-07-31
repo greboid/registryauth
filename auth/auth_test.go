@@ -24,8 +24,6 @@ func TestServer_Authorize(t *testing.T) {
 				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
-						Type:    "",
-						Class:   "",
 						Name:    "test",
 						Actions: []string{"pull"},
 					},
@@ -34,8 +32,27 @@ func TestServer_Authorize(t *testing.T) {
 			},
 			wantApprovedScopes: []*token.ResourceActions{
 				{
-					Type:    "",
-					Class:   "",
+					Name:    "test",
+					Actions: []string{"pull"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:           "ValidAuth-WantTest-IsPublic",
+			publicPrefixes: []string{"test"},
+			request: &Request{
+				User: "greboid",
+				RequestedScope: []*token.ResourceActions{
+					{
+						Name:    "test",
+						Actions: []string{"pull"},
+					},
+				},
+				validCredentials: true,
+			},
+			wantApprovedScopes: []*token.ResourceActions{
+				{
 					Name:    "test",
 					Actions: []string{"pull"},
 				},
@@ -49,8 +66,6 @@ func TestServer_Authorize(t *testing.T) {
 				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
-						Type:    "",
-						Class:   "",
 						Name:    "test",
 						Actions: []string{"push", "pull"},
 					},
@@ -59,8 +74,6 @@ func TestServer_Authorize(t *testing.T) {
 			},
 			wantApprovedScopes: []*token.ResourceActions{
 				{
-					Type:    "",
-					Class:   "",
 					Name:    "test",
 					Actions: []string{"pull"},
 				},
@@ -74,8 +87,6 @@ func TestServer_Authorize(t *testing.T) {
 				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
-						Type:    "",
-						Class:   "",
 						Name:    "test",
 						Actions: []string{"pull"},
 					},
@@ -84,8 +95,6 @@ func TestServer_Authorize(t *testing.T) {
 			},
 			wantApprovedScopes: []*token.ResourceActions{
 				{
-					Type:    "",
-					Class:   "",
 					Name:    "test",
 					Actions: []string{"pull"},
 				},
@@ -99,8 +108,6 @@ func TestServer_Authorize(t *testing.T) {
 				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
-						Type:    "",
-						Class:   "",
 						Name:    "test",
 						Actions: []string{"pull"},
 					},
@@ -109,8 +116,6 @@ func TestServer_Authorize(t *testing.T) {
 			},
 			wantApprovedScopes: []*token.ResourceActions{
 				{
-					Type:    "",
-					Class:   "",
 					Name:    "test",
 					Actions: []string{"pull"},
 				},
@@ -124,8 +129,6 @@ func TestServer_Authorize(t *testing.T) {
 				User: "greboid",
 				RequestedScope: []*token.ResourceActions{
 					{
-						Type:    "",
-						Class:   "",
 						Name:    "test",
 						Actions: []string{"pull"},
 					},
@@ -147,7 +150,7 @@ func TestServer_Authorize(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(gotApprovedScopes, tt.wantApprovedScopes) {
-				t.Errorf("Authorize() gotApprovedScopes = %#v, want %#v", gotApprovedScopes, tt.wantApprovedScopes)
+				t.Errorf("parseScope() = %#+v, want %#+v", actionsToString(gotApprovedScopes), actionsToString(tt.wantApprovedScopes))
 			}
 		})
 	}
@@ -161,77 +164,77 @@ func TestServer_parseScope(t *testing.T) {
 	}{
 		{
 			name:   "Repository with value",
-			scopes: "repository(plugin):image:pull",
+			scopes: "resourceType(resourceValue):imageName:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository(plugin)",
-					Name:    "image",
+					Type:    "resourceType(resourceValue)",
+					Name:    "imageName",
 					Actions: []string{"pull"},
 				},
 			},
 		},
 		{
 			name:   "Repository one action",
-			scopes: "repository:image:pull",
+			scopes: "resourceType:imageName:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image",
+					Type:    "resourceType",
+					Name:    "imageName",
 					Actions: []string{"pull"},
 				},
 			},
 		},
 		{
 			name:   "Multiple actions",
-			scopes: "repository:image:pull,push",
+			scopes: "resourceType:imageName:pull,push",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image",
+					Type:    "resourceType",
+					Name:    "imageName",
 					Actions: []string{"pull", "push"},
 				},
 			},
 		},
 		{
 			name:   "Image with port",
-			scopes: "repository:image:8080:pull",
+			scopes: "resourceType:registryName:8080:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image:8080",
+					Type:    "resourceType",
+					Name:    "registryName:8080",
 					Actions: []string{"pull"},
 				},
 			},
 		},
 		{
 			name:   "Image with port and path",
-			scopes: "repository:image:8080/test:pull",
+			scopes: "resourceType:registryName:8080/imageName:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image:8080/test",
+					Type:    "resourceType",
+					Name:    "registryName:8080/imageName",
 					Actions: []string{"pull"},
 				},
 			},
 		},
 		{
 			name:   "Image with port and path and tag",
-			scopes: "repository:image:8080/test:test:pull",
+			scopes: "resourceType:registryName:8080/imageName:tagName:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image:8080/test:test",
+					Type:    "resourceType",
+					Name:    "registryName:8080/imageName:tagName",
 					Actions: []string{"pull"},
 				},
 			},
 		},
 		{
 			name:   "Image with port and path and tag and digest",
-			scopes: "repository:image:8080/test:test1@test2:pull",
+			scopes: "resourceType:registryName:8080/imageName:tagName@digestName:pull",
 			want: []*token.ResourceActions{
 				{
-					Type:    "repository",
-					Name:    "image:8080/test:test1@test2",
+					Type:    "resourceType",
+					Name:    "registryName:8080/imageName:tagName@digestName",
 					Actions: []string{"pull"},
 				},
 			},
