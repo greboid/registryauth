@@ -49,7 +49,7 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		if !authRequest.validCredentials {
 			log.Infof("Authenticate failed: %s", authRequest.User)
-			writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, "HGHGHGHG"))
+			writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
 			http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
 			return
 		}
@@ -136,15 +136,15 @@ func stringSliceContains(list []string, item string) bool {
 }
 
 func ScopeHasWrite(item *token.ResourceActions) bool {
-	return stringSliceContains(item.Actions, "push")
+	return stringSliceContains(item.Actions, "push") || stringSliceContains(item.Actions, "delete")
 }
 
-func ScopeOnlyPull(item *token.ResourceActions) *token.ResourceActions {
+func LimitScopeActions(item *token.ResourceActions, allowedActions ...string) *token.ResourceActions {
 	return &token.ResourceActions{
 		Type:    item.Type,
 		Class:   item.Class,
 		Name:    item.Name,
-		Actions: []string{"pull"},
+		Actions: allowedActions,
 	}
 }
 
@@ -154,7 +154,7 @@ func (s *Server) Authorize(request *Request) ([]*token.ResourceActions, error) {
 		for _, publicPrefix := range s.PublicPrefixes {
 			if strings.HasPrefix(scopeItem.Name, publicPrefix) {
 				if ScopeHasWrite(scopeItem) {
-					approvedScopes = append(approvedScopes, ScopeOnlyPull(scopeItem))
+					approvedScopes = append(approvedScopes, LimitScopeActions(scopeItem, "pull"))
 				} else {
 					approvedScopes = append(approvedScopes, scopeItem)
 				}
