@@ -185,6 +185,29 @@ func TestServer_parseScope(t *testing.T) {
 			},
 		},
 		{
+			name:   "Repository with multi part component",
+			scopes: "resourceType:registryName/component/component:pull",
+			want: []*token.ResourceActions{
+				{
+					Type:    "resourceType",
+					Name:    "registryName/component/component",
+					Actions: []string{"pull"},
+				},
+			},
+		},
+
+		{
+			name:   "Repository with registry with port and multi part component",
+			scopes: "resourceType:registryName:8080/component/component:pull",
+			want: []*token.ResourceActions{
+				{
+					Type:    "resourceType",
+					Name:    "registryName:8080/component/component",
+					Actions: []string{"pull"},
+				},
+			},
+		},
+		{
 			name:   "Multiple actions",
 			scopes: "resourceType:imageName:pull,push",
 			want: []*token.ResourceActions{
