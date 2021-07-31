@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -14,6 +16,9 @@ import (
 )
 
 func GenerateSelfSignedCert(certPath string, keyPath string) error {
+	if checkExist(certPath, keyPath) && checkValid(certPath, keyPath) {
+		return nil
+	}
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return err
@@ -64,4 +69,32 @@ func GenerateSelfSignedCert(certPath string, keyPath string) error {
 		return err
 	}
 	return nil
+}
+
+func checkExist(certPath string, keyPath string) bool {
+	if _, err := os.Stat(certPath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	if _, err := os.Stat(keyPath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
+}
+
+func checkValid(certPath string, keyPath string) bool {
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return false
+	}
+	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return false
+	}
+	if !time.Now().After(x509Cert.NotAfter) {
+		return false
+	}
+	if !time.Now().Before(x509Cert.NotBefore) {
+		return false
+	}
+	return true
 }
