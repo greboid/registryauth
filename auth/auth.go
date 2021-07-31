@@ -117,15 +117,6 @@ func (s *Server) Authenticate(request *Request) bool {
 	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func ScopeContains(list []*token.ResourceActions, item *token.ResourceActions) bool {
-	for _, listItem := range list {
-		if listItem == item {
-			return true
-		}
-	}
-	return false
-}
-
 func stringSliceContains(list []string, item string) bool {
 	for index := range list {
 		if list[index] == item {
@@ -139,31 +130,40 @@ func ScopeHasWrite(item *token.ResourceActions) bool {
 	return stringSliceContains(item.Actions, "push") || stringSliceContains(item.Actions, "delete")
 }
 
-func LimitScopeActions(item *token.ResourceActions, allowedActions ...string) *token.ResourceActions {
-	return &token.ResourceActions{
-		Type:    item.Type,
-		Class:   item.Class,
-		Name:    item.Name,
-		Actions: allowedActions,
+func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
+	for _, publicPrefix := range s.PublicPrefixes {
+		if strings.HasPrefix(scopeItem.Name, publicPrefix) {
+			return true
+		}
 	}
+	return false
+}
+
+func (s *Server) sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials bool) *token.ResourceActions {
+	newScope := &token.ResourceActions{
+		Type:    scope.Type,
+		Class:   scope.Class,
+		Name:    scope.Name,
+		Actions: scope.Actions,
+	}
+	if validCredentials {
+		return newScope
+	}
+	if !isPublic {
+		return nil
+	}
+	if ScopeHasWrite(scope) {
+		newScope.Actions = []string{"pull"}
+		return newScope
+	}
+	return newScope
 }
 
 func (s *Server) Authorize(request *Request) ([]*token.ResourceActions, error) {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
-		for _, publicPrefix := range s.PublicPrefixes {
-			if strings.HasPrefix(scopeItem.Name, publicPrefix) {
-				if ScopeHasWrite(scopeItem) {
-					approvedScopes = append(approvedScopes, LimitScopeActions(scopeItem, "pull"))
-				} else {
-					approvedScopes = append(approvedScopes, scopeItem)
-				}
-			}
-		}
-		if request.validCredentials {
-			if !ScopeContains(approvedScopes, scopeItem) {
-				approvedScopes = append(approvedScopes, scopeItem)
-			}
+		if scope := s.sanitiseScope(scopeItem, s.isScopePublic(scopeItem), request.validCredentials); scope != nil {
+			approvedScopes = append(approvedScopes, scope)
 		}
 	}
 	return approvedScopes, nil

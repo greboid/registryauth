@@ -274,6 +274,12 @@ func TestServer_parseScope(t *testing.T) {
 }
 
 func actionsToString(a []*token.ResourceActions) string {
+	if a == nil {
+		return "nil"
+	}
+	if len(a) == 0 {
+		return ""
+	}
 	var b strings.Builder
 	b.WriteString(actionToString(a[0]))
 	for _, s := range a[1:] {
