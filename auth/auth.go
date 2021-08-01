@@ -30,12 +30,11 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	authRequest.validCredentials = s.Authenticate(authRequest)
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.Authorize(authRequest)
-		if err != nil {
+		if err == nil {
+			authRequest.ApprovedScope = approvedScope
+		} else {
 			log.Infof("Authorize failed: %s", err)
-			http.Error(writer, fmt.Sprintf("Authorize failed: %s", err), http.StatusUnauthorized)
-			return
 		}
-		authRequest.ApprovedScope = approvedScope
 	} else {
 		if !authRequest.validCredentials {
 			log.Infof("Authenticate failed: %s", authRequest.User)
