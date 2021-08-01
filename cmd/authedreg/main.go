@@ -49,6 +49,7 @@ func main() {
 		CertPath:       certPath,
 		KeyPath:        keyPath,
 		Port:           *serverPort,
+		Debug:          *debug,
 		Router:         mux.NewRouter(),
 	}
 	err = authServer.Initialise()

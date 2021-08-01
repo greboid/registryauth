@@ -28,6 +28,7 @@ type Server struct {
 	Service        string
 	Realm          string
 	Port           int
+	Debug          bool
 	Router         *mux.Router
 }
 
@@ -45,9 +46,10 @@ func (s *Server) Initialise() error {
 }
 
 func (s *Server) StartAndWait() error {
+	panicHandler := handlers.RecoveryHandler(handlers.PrintRecoveryStack(s.Debug))
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", s.Port),
-		Handler: handlers.RecoveryHandler()(s.Router),
+		Handler: panicHandler(s.Router),
 	}
 	go func() {
 		_ = server.ListenAndServeTLS(s.CertPath, s.KeyPath)
