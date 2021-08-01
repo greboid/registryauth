@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -678,6 +679,169 @@ func Test_getAuth(t *testing.T) {
 			}
 			if gotPassword != tt.wantPassword {
 				t.Errorf("getAuth() gotPassword = %v, want %v", gotPassword, tt.wantPassword)
+			}
+		})
+	}
+}
+
+func getURL(inputURL string) *url.URL {
+	parsedURL, _ := url.Parse(inputURL)
+	return parsedURL
+}
+
+func Test_parseRequestService(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *http.Request
+		want    string
+	}{
+		{
+			name: "No service specified - post",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form:   map[string][]string{},
+			},
+			want: "",
+		},
+		{
+			name: "Empty service - post",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form: map[string][]string{
+					"service": {""},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "service - post",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form: map[string][]string{
+					"service": {"testService"},
+				},
+			},
+			want: "testService",
+		},
+		{
+			name: "No service specified - get",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/"),
+			},
+			want: "",
+		},
+		{
+			name: "Empty service - get",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/?service="),
+			},
+			want: "",
+		},
+		{
+			name: "service - get",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/?service=test"),
+			},
+			want: "test",
+		},
+		{
+			name: "service - unknown",
+			request: &http.Request{
+				Method: http.MethodHead,
+				URL:    getURL("http://localhost/?service=test"),
+				Form: map[string][]string{
+					"service": {"testService"},
+				},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseRequestService(tt.request); got != tt.want {
+				t.Errorf("parseRequestService() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_parseRequestScope(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *http.Request
+		want    string
+	}{
+		{
+			name: "get - no scope",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/"),
+			},
+			want: "",
+		},
+		{
+			name: "get - single",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/?scope=test1"),
+			},
+			want: "test1",
+		},
+		{
+			name: "get - multiple scopes",
+			request: &http.Request{
+				Method: http.MethodGet,
+				URL:    getURL("http://localhost/?scope=test1&scope=test2"),
+			},
+			want: "test1 test2",
+		},
+		{
+			name: "post - no scope",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form:   map[string][]string{},
+			},
+			want: "",
+		},
+		{
+			name: "post - single scope",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form: map[string][]string{
+					"scope": {"test1"},
+				},
+			},
+			want: "test1",
+		},
+		{
+			name: "post - multiple scopes",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Form: map[string][]string{
+					"scope": {"test1 test2"},
+				},
+			},
+			want: "test1 test2",
+		},
+		{
+			name: "post - multiple scopes",
+			request: &http.Request{
+				Method: http.MethodHead,
+				URL:    getURL("http://localhost/?scope=test1&scope=test2"),
+				Form: map[string][]string{
+					"scope": {"test1 test2"},
+				},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseRequestScope(tt.request); got != tt.want {
+				t.Errorf("parseRequestScope() = %v, want %v", got, tt.want)
 			}
 		})
 	}
