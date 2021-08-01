@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"encoding/base64"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -560,6 +562,130 @@ func TestServer_isScopePublic(t *testing.T) {
 				Name: tt.scopeName,
 			}); got != tt.want {
 				t.Errorf("isScopePublic() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func getBasicAuthHeader(username string, password string) string {
+	return fmt.Sprintf("Basic %s",
+		base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))))
+}
+
+func Test_getAuth(t *testing.T) {
+	tests := []struct {
+		name         string
+		request      *http.Request
+		wantUsername string
+		wantPassword string
+	}{
+		{
+			name: "No Auth - Get",
+			request: &http.Request{
+				Method: http.MethodGet,
+				Header: map[string][]string{},
+				Form:   map[string][]string{},
+			},
+			wantUsername: "",
+			wantPassword: "",
+		},
+		{
+			name: "No Auth - Post",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{},
+				Form:   map[string][]string{},
+			},
+			wantUsername: "",
+			wantPassword: "",
+		},
+		{
+			name: "Basic Auth - Get",
+			request: &http.Request{
+				Method: http.MethodGet,
+				Header: map[string][]string{
+					"Authorization": {getBasicAuthHeader("testUser", "testPass")},
+				},
+				Form: map[string][]string{},
+			},
+			wantUsername: "testUser",
+			wantPassword: "testPass",
+		},
+		{
+			name: "Basic Auth - Post",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{
+					"Authorization": {getBasicAuthHeader("testUser", "testPass")},
+				},
+				Form: map[string][]string{},
+			},
+			wantUsername: "testUser",
+			wantPassword: "testPass",
+		},
+		{
+			name: "Form Auth",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{},
+				Form: map[string][]string{
+					"username": {"testUser"},
+					"password": {"testPass"},
+				},
+			},
+			wantUsername: "testUser",
+			wantPassword: "testPass",
+		},
+		{
+			name: "Form Auth - empty",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{},
+				Form: map[string][]string{
+					"username": {""},
+					"password": {""},
+				},
+			},
+			wantUsername: "",
+			wantPassword: "",
+		},
+		{
+			name: "Form Auth - empty user",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{},
+				Form: map[string][]string{
+					"username": {""},
+					"password": {"pass"},
+				},
+			},
+			wantUsername: "",
+			wantPassword: "",
+		},
+		{
+			name: "Prefer Basic Auth",
+			request: &http.Request{
+				Method: http.MethodPost,
+				Header: map[string][]string{
+					"Authorization": {getBasicAuthHeader("basicUser", "basicPass")},
+				},
+				Form: map[string][]string{
+					"username": {"formUser"},
+					"password": {"formPass"},
+				},
+			},
+			wantUsername: "basicUser",
+			wantPassword: "basicPass",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotUsername, gotPassword := getAuth(tt.request)
+			if gotUsername != tt.wantUsername {
+				t.Errorf("getAuth() gotUsername = %v, want %v", gotUsername, tt.wantUsername)
+			}
+			if gotPassword != tt.wantPassword {
+				t.Errorf("getAuth() gotPassword = %v, want %v", gotPassword, tt.wantPassword)
 			}
 		})
 	}

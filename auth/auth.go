@@ -26,11 +26,7 @@ type Response struct {
 }
 
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
-	authRequest, err := s.parseRequest(request)
-	if err != nil {
-		http.Error(writer, "Unable to parse auth", http.StatusBadRequest)
-		return
-	}
+	authRequest := s.parseRequest(request)
 	authRequest.validCredentials = s.Authenticate(authRequest)
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.Authorize(authRequest)
@@ -54,25 +50,14 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "Unable to create token", http.StatusInternalServerError)
 		return
 	}
-	//Bodge access_token and token to support old clients, but not sure I care
+	//Bodge access_token and token to support old clients, but not sure if I care
 	result, _ := json.Marshal(&map[string]string{"access_token": responseToken, "token": responseToken})
 	_, _ = writer.Write(result)
 }
 
-func (s *Server) parseRequest(request *http.Request) (*Request, error) {
+func (s *Server) parseRequest(request *http.Request) *Request {
 	authRequest := Request{}
-	user, password, haveBasicAuth := request.BasicAuth()
-	if haveBasicAuth {
-		authRequest.User = user
-		authRequest.Password = password
-	} else if request.Method == http.MethodPost {
-		formUser := request.FormValue("username")
-		formPass := request.FormValue("password")
-		if formUser != "" && formPass != "" {
-			authRequest.User = formUser
-			authRequest.Password = formPass
-		}
-	}
+	authRequest.User, authRequest.Password = getAuth(request)
 	if request.Method == http.MethodGet {
 		authRequest.Service = request.URL.Query().Get("service")
 		authRequest.RequestedScope = s.parseScope(strings.Join(request.URL.Query()["scope"], " "))
@@ -80,7 +65,21 @@ func (s *Server) parseRequest(request *http.Request) (*Request, error) {
 		authRequest.Service = request.FormValue("service")
 		authRequest.RequestedScope = s.parseScope(request.FormValue("scope"))
 	}
-	return &authRequest, nil
+	return &authRequest
+}
+
+func getAuth(request *http.Request) (string, string) {
+	user, password, haveBasicAuth := request.BasicAuth()
+	if haveBasicAuth {
+		return user, password
+	} else if request.Method == http.MethodPost {
+		formUser := request.FormValue("username")
+		formPass := request.FormValue("password")
+		if formUser != "" && formPass != "" {
+			return formUser, formPass
+		}
+	}
+	return "", ""
 }
 
 func (s *Server) parseScope(scopes string) []*token.ResourceActions {
