@@ -74,7 +74,6 @@ func ParsePrefixes(prefixInput string) []string {
 }
 
 func ParseUsers(userInput string) (map[string]string, error) {
-	userInput = "{greboid: $2a$07$7OZXusHZ5wlngvZUL86InubVaN7y3wvQy28qNv62OrsInxsgnnUB2}"
 	userList := map[string]string{}
 	err := yaml.Unmarshal([]byte(userInput), userList)
 	if err != nil {
