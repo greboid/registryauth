@@ -35,7 +35,7 @@ func main() {
 	} else {
 		log.SetLevel(log.ErrorLevel)
 	}
-	log.SetFormatter(auth.Formatter{})
+	log.SetFormatter(auth.Formatter{Debug: *debug})
 	users, err := auth.ParseUsers(*userInput)
 	if err != nil {
 		log.Fatalf("Unable to parse users: %s", err)
