@@ -118,8 +118,12 @@ func (s *Server) Authenticate(request *Request) bool {
 }
 
 func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
+	if scopeItem.Type != "repository" {
+		return false
+	}
 	for _, publicPrefix := range s.PublicPrefixes {
-		if strings.HasPrefix(scopeItem.Name, publicPrefix) {
+		if len(scopeItem.Name) > len(publicPrefix+"/") &&
+			strings.HasPrefix(scopeItem.Name, publicPrefix+"/") {
 			return true
 		}
 	}
