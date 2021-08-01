@@ -28,7 +28,7 @@ type Response struct {
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	authRequest := parseRequest(s.Users, request)
 	if len(authRequest.RequestedScope) > 0 {
-		approvedScope, err := s.authorise(authRequest)
+		approvedScope, err := authorise(s.PublicPrefixes, authRequest)
 		if err == nil {
 			authRequest.ApprovedScope = approvedScope
 		} else {
@@ -155,10 +155,10 @@ func sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials
 	return newScope
 }
 
-func (s *Server) authorise(request *Request) ([]*token.ResourceActions, error) {
+func authorise(publicPrefixes []string, request *Request) ([]*token.ResourceActions, error) {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
-		if scope := sanitiseScope(scopeItem, isScopePublic(s.PublicPrefixes, scopeItem), request.validCredentials); scope != nil {
+		if scope := sanitiseScope(scopeItem, isScopePublic(publicPrefixes, scopeItem), request.validCredentials); scope != nil {
 			approvedScopes = append(approvedScopes, scope)
 		}
 	}
