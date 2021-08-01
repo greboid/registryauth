@@ -117,15 +117,6 @@ func (s *Server) Authenticate(request *Request) bool {
 	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func stringSliceContains(list []string, item string) bool {
-	for index := range list {
-		if list[index] == item {
-			return true
-		}
-	}
-	return false
-}
-
 func ScopeIsPull(item *token.ResourceActions) bool {
 	if len(item.Actions) == 1 {
 		return item.Actions[0] == "pull"
