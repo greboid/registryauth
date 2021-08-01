@@ -117,13 +117,6 @@ func (s *Server) Authenticate(request *Request) bool {
 	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func ScopeIsPull(item *token.ResourceActions) bool {
-	if len(item.Actions) == 1 {
-		return item.Actions[0] == "pull"
-	}
-	return false
-}
-
 func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
 	for _, publicPrefix := range s.PublicPrefixes {
 		if strings.HasPrefix(scopeItem.Name, publicPrefix) {
@@ -146,7 +139,7 @@ func (s *Server) sanitiseScope(scope *token.ResourceActions, isPublic bool, vali
 	if !isPublic {
 		return nil
 	}
-	if !ScopeIsPull(scope) {
+	if len(scope.Actions) > 1 || scope.Actions[0] != "pull" {
 		newScope.Actions = []string{"pull"}
 		return newScope
 	}
