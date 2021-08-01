@@ -97,7 +97,7 @@ func (s *Server) parseScope(scopes string) []*token.ResourceActions {
 			continue
 		}
 		splitScope := strings.Split(scope, ":")
-		if len(splitScope) < 2 {
+		if len(splitScope) <= 2 {
 			continue
 		}
 		resourceActions = append(resourceActions, &token.ResourceActions{
