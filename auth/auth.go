@@ -26,11 +26,7 @@ type Response struct {
 }
 
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
-	authRequest := &Request{}
-	authRequest.User, authRequest.Password = getAuth(request)
-	authRequest.Service = parseRequestService(request)
-	authRequest.RequestedScope = parseScope(parseRequestScope(request))
-	authRequest.validCredentials = authenticate(s.Users, authRequest)
+	authRequest := parseRequest(s.Users, request)
 	if len(authRequest.RequestedScope) > 0 {
 		approvedScope, err := s.authorise(authRequest)
 		if err == nil {
@@ -55,6 +51,15 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	//Bodge access_token and token to support old clients, but not sure if I care
 	result, _ := json.Marshal(&map[string]string{"access_token": responseToken, "token": responseToken})
 	_, _ = writer.Write(result)
+}
+
+func parseRequest(users map[string]string, request *http.Request) *Request {
+	authRequest := &Request{}
+	authRequest.User, authRequest.Password = getAuth(request)
+	authRequest.Service = parseRequestService(request)
+	authRequest.RequestedScope = parseScope(parseRequestScope(request))
+	authRequest.validCredentials = authenticate(users, authRequest)
+	return authRequest
 }
 
 func parseRequestScope(request *http.Request) string {
