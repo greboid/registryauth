@@ -126,8 +126,11 @@ func stringSliceContains(list []string, item string) bool {
 	return false
 }
 
-func ScopeHasWrite(item *token.ResourceActions) bool {
-	return stringSliceContains(item.Actions, "push") || stringSliceContains(item.Actions, "delete")
+func ScopeIsPull(item *token.ResourceActions) bool {
+	if len(item.Actions) == 1 {
+		return item.Actions[0] == "pull"
+	}
+	return false
 }
 
 func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
@@ -152,7 +155,7 @@ func (s *Server) sanitiseScope(scope *token.ResourceActions, isPublic bool, vali
 	if !isPublic {
 		return nil
 	}
-	if ScopeHasWrite(scope) {
+	if !ScopeIsPull(scope) {
 		newScope.Actions = []string{"pull"}
 		return newScope
 	}
