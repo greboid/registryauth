@@ -26,20 +26,23 @@ type Response struct {
 }
 
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
-	authRequest := s.parseRequest(request)
-	authRequest.validCredentials = s.Authenticate(authRequest)
+	authRequest := &Request{}
+	authRequest.User, authRequest.Password = getAuth(request)
+	authRequest.Service = parseRequestService(request)
+	authRequest.RequestedScope = parseScope(parseRequestScope(request))
+	authRequest.validCredentials = authenticate(s.Users, authRequest)
 	if len(authRequest.RequestedScope) > 0 {
-		approvedScope, err := s.Authorize(authRequest)
+		approvedScope, err := s.authorise(authRequest)
 		if err == nil {
 			authRequest.ApprovedScope = approvedScope
 		} else {
-			log.Infof("Authorize failed: %s", err)
+			log.Infof("authorise failed: %s", err)
 		}
 	} else {
 		if !authRequest.validCredentials {
-			log.Infof("Authenticate failed: %s", authRequest.User)
-			writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
-			http.Error(writer, "Authenticate failed", http.StatusUnauthorized)
+			log.Infof("authenticate failed: %s", authRequest.User)
+			writer.Header().Set("WWW-authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
+			http.Error(writer, "authenticate failed", http.StatusUnauthorized)
 			return
 		}
 	}
@@ -54,17 +57,22 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	_, _ = writer.Write(result)
 }
 
-func (s *Server) parseRequest(request *http.Request) *Request {
-	authRequest := Request{}
-	authRequest.User, authRequest.Password = getAuth(request)
+func parseRequestScope(request *http.Request) string {
 	if request.Method == http.MethodGet {
-		authRequest.Service = request.URL.Query().Get("service")
-		authRequest.RequestedScope = s.parseScope(strings.Join(request.URL.Query()["scope"], " "))
+		return strings.Join(request.URL.Query()["scope"], " ")
 	} else if request.Method == http.MethodPost {
-		authRequest.Service = request.FormValue("service")
-		authRequest.RequestedScope = s.parseScope(request.FormValue("scope"))
+		return request.FormValue("scope")
 	}
-	return &authRequest
+	return ""
+}
+
+func parseRequestService(request *http.Request) string {
+	if request.Method == http.MethodGet {
+		return request.URL.Query().Get("service")
+	} else if request.Method == http.MethodPost {
+		return request.FormValue("service")
+	}
+	return ""
 }
 
 func getAuth(request *http.Request) (string, string) {
@@ -81,7 +89,7 @@ func getAuth(request *http.Request) (string, string) {
 	return "", ""
 }
 
-func (s *Server) parseScope(scopes string) []*token.ResourceActions {
+func parseScope(scopes string) []*token.ResourceActions {
 	resourceActions := make([]*token.ResourceActions, 0)
 	scopeParts := strings.Split(scopes, " ")
 	for _, scope := range scopeParts {
@@ -101,19 +109,19 @@ func (s *Server) parseScope(scopes string) []*token.ResourceActions {
 	return resourceActions
 }
 
-func (s *Server) Authenticate(request *Request) bool {
-	password, ok := s.Users[request.User]
+func authenticate(users map[string]string, request *Request) bool {
+	password, ok := users[request.User]
 	if !ok {
 		return false
 	}
 	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
+func isScopePublic(publicPrefixes []string, scopeItem *token.ResourceActions) bool {
 	if scopeItem.Type != "repository" {
 		return false
 	}
-	for _, publicPrefix := range s.PublicPrefixes {
+	for _, publicPrefix := range publicPrefixes {
 		if len(scopeItem.Name) > len(publicPrefix+"/") &&
 			strings.HasPrefix(scopeItem.Name, publicPrefix+"/") {
 			return true
@@ -122,7 +130,7 @@ func (s *Server) isScopePublic(scopeItem *token.ResourceActions) bool {
 	return false
 }
 
-func (s *Server) sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials bool) *token.ResourceActions {
+func sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials bool) *token.ResourceActions {
 	newScope := &token.ResourceActions{
 		Type:    scope.Type,
 		Class:   scope.Class,
@@ -142,10 +150,10 @@ func (s *Server) sanitiseScope(scope *token.ResourceActions, isPublic bool, vali
 	return newScope
 }
 
-func (s *Server) Authorize(request *Request) ([]*token.ResourceActions, error) {
+func (s *Server) authorise(request *Request) ([]*token.ResourceActions, error) {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
-		if scope := s.sanitiseScope(scopeItem, s.isScopePublic(scopeItem), request.validCredentials); scope != nil {
+		if scope := sanitiseScope(scopeItem, isScopePublic(s.PublicPrefixes, scopeItem), request.validCredentials); scope != nil {
 			approvedScopes = append(approvedScopes, scope)
 		}
 	}

@@ -177,9 +177,9 @@ func TestServer_Authorize(t *testing.T) {
 			s := &Server{
 				PublicPrefixes: tt.publicPrefixes,
 			}
-			gotApprovedScopes, err := s.Authorize(tt.request)
+			gotApprovedScopes, err := s.authorise(tt.request)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Authorize() error = %#v, wantErr %#v", err, tt.wantErr)
+				t.Errorf("authorise() error = %#v, wantErr %#v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotApprovedScopes, tt.wantApprovedScopes) {
@@ -308,8 +308,7 @@ func TestServer_parseScope(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{}
-			if got := s.parseScope(tt.scopes); !reflect.DeepEqual(got, tt.want) {
+			if got := parseScope(tt.scopes); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseScope() = %#+v, want %#+v", actionsToString(got), actionsToString(tt.want))
 			}
 		})
@@ -428,8 +427,7 @@ func TestServer_sanitiseScope(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{}
-			if got := s.sanitiseScope(tt.scope, tt.isPublic, tt.validCredentials); !reflect.DeepEqual(got, tt.want) {
+			if got := sanitiseScope(tt.scope, tt.isPublic, tt.validCredentials); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sanitiseScope() = %v, want %v", got, tt.want)
 			}
 		})
@@ -491,11 +489,8 @@ func TestServer_Authenticate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Users: tt.users,
-			}
-			if got := s.Authenticate(tt.request); got != tt.want {
-				t.Errorf("Authenticate() = %v, want %v", got, tt.want)
+			if got := authenticate(tt.users, tt.request); got != tt.want {
+				t.Errorf("authenticate() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -554,10 +549,7 @@ func TestServer_isScopePublic(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				PublicPrefixes: tt.PublicPrefixes,
-			}
-			if got := s.isScopePublic(&token.ResourceActions{
+			if got := isScopePublic(tt.PublicPrefixes, &token.ResourceActions{
 				Type: tt.scopeType,
 				Name: tt.scopeName,
 			}); got != tt.want {
