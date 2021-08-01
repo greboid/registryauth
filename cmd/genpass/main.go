@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"syscall"
 
 	"golang.org/x/crypto/bcrypt"
@@ -10,6 +12,19 @@ import (
 )
 
 func main() {
+	state, err := term.GetState(syscall.Stdin)
+	if err != nil {
+		log.Printf("Unable to get terminal state: %s", err)
+	}
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	defer func() {
+		signal.Stop(signalChan)
+		err = term.Restore(syscall.Stdin, state)
+		if err != nil {
+			log.Printf("Unable to restore terminal state: %s", err)
+		}
+	}()
 	fmt.Print("Enter Password: ")
 	bytePassword, err := term.ReadPassword(syscall.Stdin)
 	if err != nil {
