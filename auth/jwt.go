@@ -14,15 +14,15 @@ import (
 	"github.com/docker/libtrust"
 )
 
-func (s *Server) CreateToken(request *Request) (string, error) {
+func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string, request *Request) (string, error) {
 	now := time.Now()
 	header := token.Header{
 		Type:       "JWT",
 		SigningAlg: "RS256",
-		KeyID:      s.publicKey.KeyID(),
+		KeyID:      publicKey.KeyID(),
 	}
 	claims := token.ClaimSet{
-		Issuer:     s.Issuer,
+		Issuer:     issuer,
 		Subject:    request.User,
 		Audience:   request.Service,
 		NotBefore:  now.Add(-1 * time.Minute).Unix(),
@@ -40,7 +40,7 @@ func (s *Server) CreateToken(request *Request) (string, error) {
 		return "", err
 	}
 	payload := fmt.Sprintf("%s%s%s", joseBase64UrlEncode(headerJson), token.TokenSeparator, joseBase64UrlEncode(claimsJson))
-	sig, _, err := s.privateKey.Sign(strings.NewReader(payload), 0)
+	sig, _, err := privateKey.Sign(strings.NewReader(payload), 0)
 	if err != nil {
 		return "", err
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
+	"github.com/docker/libtrust"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,30 +28,45 @@ type Response struct {
 
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	authRequest := parseRequest(s.Users, request)
-	if len(authRequest.RequestedScope) > 0 {
-		approvedScope, err := authorise(s.PublicPrefixes, authRequest)
+	err := authRequest.getApprovedScope(s.PublicPrefixes)
+	if err != nil {
+		request.Header.Set("WWW-authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	jwtToken, err := authRequest.getToken(s.publicKey, s.privateKey, s.Issuer)
+	if err != nil {
+		http.Error(writer, "authorise failed", http.StatusInternalServerError)
+	}
+	_, _ = writer.Write(jwtToken)
+}
+
+func (r *Request) getApprovedScope(publicPrefixes []string) error {
+	if len(r.RequestedScope) > 0 {
+		approvedScope, err := authorise(publicPrefixes, r)
 		if err == nil {
-			authRequest.ApprovedScope = approvedScope
+			r.ApprovedScope = approvedScope
 		} else {
 			log.Infof("authorise failed: %s", err)
 		}
 	} else {
-		if !authRequest.validCredentials {
-			log.Infof("authenticate failed: %s", authRequest.User)
-			writer.Header().Set("WWW-authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
-			http.Error(writer, "authenticate failed", http.StatusUnauthorized)
-			return
+		if !r.validCredentials {
+			log.Infof("authenticate failed: %s", r.User)
+			return fmt.Errorf("authentication failed")
 		}
 	}
-	responseToken, err := s.CreateToken(authRequest)
+	return nil
+}
+
+func (r *Request) getToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string) ([]byte, error) {
+	responseToken, err := CreateToken(publicKey, privateKey, issuer, r)
 	if err != nil {
 		log.Errorf("Unable to create token: %s", err)
-		http.Error(writer, "Unable to create token", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 	//Bodge access_token and token to support old clients, but not sure if I care
 	result, _ := json.Marshal(&map[string]string{"access_token": responseToken, "token": responseToken})
-	_, _ = writer.Write(result)
+	return result, nil
 }
 
 func parseRequest(users map[string]string, request *http.Request) *Request {
