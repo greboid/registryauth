@@ -41,6 +41,7 @@ func (s *Server) Initialise() error {
 	if err != nil {
 		return fmt.Errorf("loading certicates: %s", err.Error())
 	}
+	s.Router.Path("/").HandlerFunc(OK)
 	s.Router.PathPrefix("/auth").HandlerFunc(s.HandleAuth).Methods(http.MethodPost, http.MethodGet)
 	return nil
 }
@@ -63,6 +64,10 @@ func (s *Server) StartAndWait() error {
 		return err
 	}
 	return nil
+}
+
+func OK(writer http.ResponseWriter, _ *http.Request) {
+	writer.WriteHeader(http.StatusOK)
 }
 
 func ParsePrefixes(prefixInput string) []string {
