@@ -52,7 +52,7 @@ func (s *Server) StartAndWait() error {
 		Handler: panicHandler(s.Router),
 	}
 	go func() {
-		_ = server.ListenAndServeTLS(s.CertPath, s.KeyPath)
+		_ = server.ListenAndServe()
 	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
