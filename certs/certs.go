@@ -52,15 +52,15 @@ func GenerateSelfSignedCert(certPath string, keyPath string) error {
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(filepath.Dir(certPath), 0700)
+	err = os.MkdirAll(filepath.Dir(certPath), 0711)
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(filepath.Dir(keyPath), 0700)
+	err = os.MkdirAll(filepath.Dir(keyPath), 0711)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(certPath, certPEM.Bytes(), 0600)
+	err = os.WriteFile(certPath, certPEM.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
