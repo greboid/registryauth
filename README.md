@@ -10,7 +10,7 @@ There are three binaries available for building and containers published for all
 |CLI Flag|Env var|Description|
 |---|---|---|
 |-port|PORT|Server port to listen on, defaults to 8080|
-|-public|PUBLIC|comma separated list of directory prefixes that will be public, a leading slash or trailing slash is not required. If you want the entire registry to be public, set this to `/`|
+|-public|PUBLIC|comma separated list of prefixes that will be public, a leading slash is not required, except if you want the entire registry to be public, set this to `/`|
 |-users|USERS|json list list of users if using in compose append a pipe after the env var and put a user per line you'll need to double the dollar symbols to escape them ie username:$$crypted$$password
 |-realm|REALM|Realm for the registry|
 |-issuer|ISSUER|Issuer for the registry|

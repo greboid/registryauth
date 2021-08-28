@@ -535,14 +535,14 @@ func TestServer_isScopePublic(t *testing.T) {
 			PublicPrefixes: []string{"public"},
 			scopeType:      "repository",
 			scopeName:      "public",
-			want:           false,
+			want:           true,
 		},
 		{
 			name:           "",
 			PublicPrefixes: []string{"public"},
 			scopeType:      "repository",
 			scopeName:      "public/",
-			want:           false,
+			want:           true,
 		},
 		{
 			name:           "",
