@@ -13,12 +13,15 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GenerateSelfSignedCert(certPath string, keyPath string) error {
 	if checkExist(certPath, keyPath) && checkValid(certPath, keyPath) {
 		return nil
 	}
+	log.Infof("Regenerating certificates")
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return err

@@ -183,6 +183,7 @@ func authorise(publicPrefixes []string, request *Request) ([]*token.ResourceActi
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
 		if scope := sanitiseScope(scopeItem, isScopePublic(publicPrefixes, scopeItem), request.validCredentials); scope != nil {
+			log.Debugf("Approving scope: %s", scope)
 			approvedScopes = append(approvedScopes, scope)
 		}
 	}
