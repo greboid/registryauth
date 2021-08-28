@@ -18,10 +18,10 @@ jobs:
         uses: greboid/docker-tags-action@v4.0.0
         with:
           separator: ' '
-          fullname: 'false' 
+          fullname: 'false'
 
       - name: Build image
-        id: build-image
+        id: build-image-auth
         uses: redhat-actions/buildah-build@v2.6.1
         with:
           dockerfiles: cmd/auth/Dockerfile
@@ -33,14 +33,14 @@ jobs:
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
-          image: ${{ steps.build-image.outputs.image }} 
+          image: ${{ steps.build-image-auth.outputs.image }}
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.tags.outputs.tags }}
 
       - name: Build image
-        id: build-image
+        id: build-image-authedreg
         uses: redhat-actions/buildah-build@v2.6.1
         with:
           dockerfiles: cmd/auth/Dockerfile
@@ -52,14 +52,14 @@ jobs:
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
-          image: ${{ steps.build-image.outputs.image }}
+          image: ${{ steps.build-image-authedreg.outputs.image }}
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.tags.outputs.tags }}
 
       - name: Build image
-        id: build-image  
+        id: build-image-genpass
         uses: redhat-actions/buildah-build@v2.6.1
         with:
           dockerfiles: cmd/auth/Dockerfile
@@ -71,8 +71,8 @@ jobs:
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
-          image: ${{ steps.build-image.outputs.image }}
+          image: ${{ steps.build-image-genpass.outputs.image }}
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.tags }
