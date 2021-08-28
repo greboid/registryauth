@@ -39,7 +39,23 @@ the certificate produced by this project as it will be used to sign requests, yo
 options to match those configured on the auth component. The certificate will be [CERT_DIR]/cert.pem and the key if
 required will be [CERT_DIR]/key.pem
 
-- realm
-- issuer
-- service
-- root cert bundle
+Environment Variables:
+
+```
+REGISTRY_AUTH: token
+REGISTRY_AUTH_TOKEN_REALM: https://<hostname>/auth
+REGISTRY_AUTH_TOKEN_SERVICE: <service name>
+REGISTRY_AUTH_TOKEN_ISSUER: <issuer name>
+REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: <CERT_DIR>/cert.pem
+```
+
+Configuration File:
+
+```
+auth:
+  token:
+    realm: https://<hostname>/auth
+    service: <service name>
+    issuer: <issuer name>
+    rootcertbundle: <CERT_DIR>/cert.pem
+```
