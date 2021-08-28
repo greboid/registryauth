@@ -504,6 +504,13 @@ func TestServer_isScopePublic(t *testing.T) {
 	}{
 		{
 			name:           "",
+			PublicPrefixes: []string{""},
+			scopeType:      "repository",
+			scopeName:      "test",
+			want:           false,
+		},
+		{
+			name:           "",
 			PublicPrefixes: []string{"public"},
 			scopeType:      "registry",
 			scopeName:      "catalog",
@@ -540,6 +547,13 @@ func TestServer_isScopePublic(t *testing.T) {
 		{
 			name:           "",
 			PublicPrefixes: []string{"public"},
+			scopeType:      "repository",
+			scopeName:      "public/test",
+			want:           true,
+		},
+		{
+			name:           "",
+			PublicPrefixes: []string{"/"},
 			scopeType:      "repository",
 			scopeName:      "public/test",
 			want:           true,

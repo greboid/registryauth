@@ -143,8 +143,16 @@ func isScopePublic(publicPrefixes []string, scopeItem *token.ResourceActions) bo
 		return false
 	}
 	for _, publicPrefix := range publicPrefixes {
-		if len(scopeItem.Name) > len(publicPrefix+"/") &&
-			strings.HasPrefix(scopeItem.Name, publicPrefix+"/") {
+		var folderPrefix string
+		if publicPrefix == "/" {
+			folderPrefix = ""
+		} else {
+			folderPrefix = publicPrefix + "/"
+		}
+		fmt.Printf("Scope: %s\n", scopeItem.Name)
+		fmt.Printf("Folder Prefix: %s\n", folderPrefix)
+		if len(scopeItem.Name) > len(folderPrefix) &&
+			strings.HasPrefix(scopeItem.Name, folderPrefix) {
 			return true
 		}
 	}
