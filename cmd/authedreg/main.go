@@ -21,6 +21,8 @@ var (
 	registryDirectory = flag.String("registry-dir", filepath.Join(*dataDirectory, "registry"), "Registry data directory")
 	certDirectory     = flag.String("cert-dir", "", "Certificate directory")
 	debug             = flag.Bool("debug", false, "Show debug logging")
+	notifyEndpoint    = flag.String("notify-endpoint", "", "URL that receives registry notifications")
+	notifyToken       = flag.String("notify-token", "", "Bearer token to send with registry notifications")
 	certPath          = ""
 	keyPath           = ""
 )
@@ -61,7 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
-	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath))
+	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *realm, *issuer, *service, certPath, *notifyEndpoint, *notifyToken))
 	log.Infof("Server started")
 	err = authServer.StartAndWait()
 	if err != nil {

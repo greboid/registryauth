@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
@@ -16,7 +18,7 @@ import (
 	_ "github.com/spf13/cobra"
 )
 
-func StartRegistry(directory string, realm string, issuer string, service string, cert string) http.Handler {
+func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, notifyToken string) http.Handler {
 	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"filesystem": configuration.Parameters{
@@ -32,7 +34,31 @@ func StartRegistry(directory string, realm string, issuer string, service string
 				"rootcertbundle": cert,
 			},
 		},
+		Notifications: configuration.Notifications{
+			Endpoints: getNotifyEndpoint(notifyEndpoint, notifyToken),
+		},
 	}
 	config.HTTP.Secret = fmt.Sprintf("%d", rand.Int63())
 	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
+}
+
+func getNotifyEndpoint(endpoint string, token string) []configuration.Endpoint {
+	if endpoint == "" {
+		return []configuration.Endpoint{}
+	}
+	_, err := url.Parse(endpoint)
+	if err != nil {
+		return []configuration.Endpoint{}
+	}
+	return []configuration.Endpoint{
+		{
+			Name:      "notify",
+			Disabled:  false,
+			URL:       endpoint,
+			Headers:   http.Header{"Authorization": []string{"Bearer " + token}},
+			Timeout:   1 * time.Second,
+			Threshold: 5,
+			Backoff:   5 * time.Second,
+		},
+	}
 }
