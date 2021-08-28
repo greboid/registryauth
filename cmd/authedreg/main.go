@@ -19,10 +19,10 @@ var (
 	service           = flag.String("service", "Registry", "Service name for the registry")
 	dataDirectory     = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
 	registryDirectory = flag.String("registry-dir", filepath.Join(*dataDirectory, "registry"), "Registry data directory")
-	certDirectory     = flag.String("cert-dir", filepath.Join(*dataDirectory, "certs"), "Certificate directory")
+	certDirectory     = flag.String("cert-dir", "", "Certificate directory")
 	debug             = flag.Bool("debug", false, "Show debug logging")
-	certPath          = filepath.Join(*certDirectory, "cert.pem")
-	keyPath           = filepath.Join(*certDirectory, "key.pem")
+	certPath          = ""
+	keyPath           = ""
 )
 
 func main() {
@@ -30,6 +30,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
+	if *certDirectory == "" {
+		filepath.Join(*dataDirectory, "certs")
+	}
+	certPath = filepath.Join(*certDirectory, "cert.pem")
+	keyPath = filepath.Join(*certDirectory, "key.pem")
 	if *debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
