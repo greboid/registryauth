@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
 	if *certDirectory == "" {
-		filepath.Join(*dataDirectory, "certs")
+		*certDirectory = filepath.Join(*dataDirectory, "certs")
 	}
 	certPath = filepath.Join(*certDirectory, "cert.pem")
 	keyPath = filepath.Join(*certDirectory, "key.pem")
