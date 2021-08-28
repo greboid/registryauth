@@ -75,4 +75,4 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          tags: ${{ steps.tags.outputs.tags }
+          tags: ${{ steps.tags.outputs.tags }}
