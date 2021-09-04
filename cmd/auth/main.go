@@ -6,22 +6,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
+	"github.com/greboid/registryauth/certs"
 	"github.com/kouhin/envflag"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	publicPrefixes = flag.String("public", "", "prefixes of public readable folders")
-	userInput      = flag.String("users", "", "Yaml formatted list of users")
-	serverPort     = flag.Int("port", 8080, "Port for the server to listen on")
-	realm          = flag.String("realm", "Registry", "Realm for the registry")
-	issuer         = flag.String("issuer", "Registry", "Issuer for the registry")
-	service        = flag.String("service", "Registry", "Service name for the registry")
-	dataDirectory  = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
-	certDirectory  = flag.String("cert-dir", "", "Certificate directory")
-	debug          = flag.Bool("debug", false, "Show debug logging")
-	certPath       = ""
-	keyPath        = ""
+	dataDirectory = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
+	certPath      = ""
+	keyPath       = ""
 )
 
 func main() {
@@ -29,32 +22,26 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
-	if *certDirectory == "" {
-		*certDirectory = filepath.Join(*dataDirectory, "certs")
-	}
-	certPath = filepath.Join(*certDirectory, "cert.pem")
-	keyPath = filepath.Join(*certDirectory, "key.pem")
-	if *debug {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.ErrorLevel)
-	}
-	log.SetFormatter(auth.Formatter{Debug: *debug})
-	users, err := auth.ParseUsers(*userInput)
+	certPath, keyPath = certs.GetCertPaths(*dataDirectory)
+	auth.InitFormatter()
+	users, err := auth.ParseUsers(*auth.UserInput)
 	if err != nil {
 		log.Fatalf("Unable to parse users: %s", err)
 	}
 	authServer := &auth.Server{
 		Users:          users,
-		PublicPrefixes: auth.ParsePrefixes(*publicPrefixes),
-		Issuer:         *issuer,
-		Realm:          *realm,
-		Service:        *service,
+		PublicPrefixes: auth.ParsePrefixes(*auth.PublicPrefixes),
+		Issuer:         *auth.Issuer,
+		Realm:          *auth.Realm,
+		Service:        *auth.Service,
 		CertPath:       certPath,
 		KeyPath:        keyPath,
-		Port:           *serverPort,
-		Debug:          *debug,
+		Port:           *auth.ServerPort,
+		Debug:          *auth.Debug,
 		Router:         mux.NewRouter(),
+		PullHostname:   *auth.PullHostname,
+		ShowIndex:      *auth.ShowIndex,
+		ShowListing:    *auth.ShowListings,
 	}
 	err = authServer.Initialise()
 	if err != nil {

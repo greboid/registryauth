@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,6 +11,14 @@ import (
 	"github.com/docker/libtrust"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	PublicPrefixes = flag.String("public", "", "prefixes of public readable folders")
+	UserInput      = flag.String("users", "", "Yaml formatted list of users")
+	Realm          = flag.String("realm", "Registry", "Realm for the registry")
+	Issuer         = flag.String("issuer", "Registry", "Issuer for the registry")
+	Service        = flag.String("service", "Registry", "Service name for the registry")
 )
 
 type Request struct {

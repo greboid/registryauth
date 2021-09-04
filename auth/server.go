@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"embed"
+	"flag"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +17,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/certs"
 	"gopkg.in/yaml.v2"
+)
+
+var (
+	ServerPort = flag.Int("port", 8080, "Port for the server to listen on")
 )
 
 type Server struct {

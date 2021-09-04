@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"flag"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -16,6 +17,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+var (
+	CertDirectory = flag.String("cert-dir", "", "Certificate directory")
+)
+
+func GetCertPaths(dataDirectory string) (string, string) {
+	if *CertDirectory == "" {
+		*CertDirectory = filepath.Join(dataDirectory, "certs")
+	}
+	return filepath.Join(*CertDirectory, "cert.pem"), filepath.Join(*CertDirectory, "key.pem")
+}
 
 func GenerateSelfSignedCert(certPath string, keyPath string) error {
 	if checkExist(certPath, keyPath) && checkValid(certPath, keyPath) {
