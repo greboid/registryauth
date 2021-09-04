@@ -26,6 +26,32 @@ type Response struct {
 	Token   string `json:"token"`
 }
 
+func (s *Server) GetFullAccessToken() (string, error) {
+	authRequest := &Request{
+		User:     "internal",
+		Password: "",
+		Service:  s.Service,
+		ApprovedScope: []*token.ResourceActions{
+			{
+				Type:    "repository",
+				Name:    "*",
+				Actions: []string{"*"},
+			},
+			{
+				Type:    "registry",
+				Name:    "catalog",
+				Actions: []string{"*"},
+			},
+		},
+		validCredentials: true,
+	}
+	authToken, err := authRequest.getResponseToken(s.publicKey, s.privateKey, s.Issuer)
+	if err != nil {
+		return "", err
+	}
+	return authToken, err
+}
+
 func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	authRequest := parseRequest(s.Users, request)
 	err := authRequest.getApprovedScope(s.PublicPrefixes)
@@ -58,8 +84,17 @@ func (r *Request) getApprovedScope(publicPrefixes []string) error {
 	return nil
 }
 
-func (r *Request) getToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string) ([]byte, error) {
+func (r *Request) getResponseToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string) (string, error) {
 	responseToken, err := CreateToken(publicKey, privateKey, issuer, r)
+	if err != nil {
+		log.Errorf("Unable to create token: %s", err)
+		return "", err
+	}
+	return responseToken, nil
+}
+
+func (r *Request) getToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string) ([]byte, error) {
+	responseToken, err := r.getResponseToken(publicKey, privateKey, issuer)
 	if err != nil {
 		log.Errorf("Unable to create token: %s", err)
 		return nil, err

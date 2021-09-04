@@ -30,7 +30,14 @@ type Server struct {
 	Port           int
 	Debug          bool
 	Router         *mux.Router
+	ShowIndex      bool
+	ShowListing    bool
+	templates      *template.Template
+	PullHostname   string
 }
+
+//go:embed templates
+var templates embed.FS
 
 func (s *Server) Initialise() error {
 	err := certs.GenerateSelfSignedCert(s.CertPath, s.KeyPath)
@@ -41,7 +48,14 @@ func (s *Server) Initialise() error {
 	if err != nil {
 		return fmt.Errorf("loading certicates: %s", err.Error())
 	}
-	s.Router.Path("/").HandlerFunc(OK)
+	s.templates = template.Must(template.ParseFS(templates, "templates/*.gohtml"))
+	if s.ShowListing {
+		s.Router.Path("/").HandlerFunc(s.ListingIndex)
+	} else if s.ShowIndex {
+		s.Router.Path("/").HandlerFunc(s.Index)
+	} else {
+		s.Router.Path("/").HandlerFunc(s.OK)
+	}
 	s.Router.PathPrefix("/auth").HandlerFunc(s.HandleAuth).Methods(http.MethodPost, http.MethodGet)
 	return nil
 }
@@ -66,7 +80,7 @@ func (s *Server) StartAndWait() error {
 	return nil
 }
 
-func OK(writer http.ResponseWriter, _ *http.Request) {
+func (s *Server) OK(writer http.ResponseWriter, _ *http.Request) {
 	writer.WriteHeader(http.StatusOK)
 }
 

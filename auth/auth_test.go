@@ -558,6 +558,13 @@ func TestServer_isScopePublic(t *testing.T) {
 			scopeName:      "public/test",
 			want:           true,
 		},
+		{
+			name:           "",
+			PublicPrefixes: []string{"/"},
+			scopeType:      "repository",
+			scopeName:      "test",
+			want:           true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

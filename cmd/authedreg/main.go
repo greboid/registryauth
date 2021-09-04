@@ -58,6 +58,9 @@ func main() {
 		Port:           *serverPort,
 		Debug:          *debug,
 		Router:         mux.NewRouter(),
+		PullHostname:   *auth.PullHostname,
+		ShowIndex:      *auth.ShowIndex,
+		ShowListing:    *auth.ShowListings,
 	}
 	err = authServer.Initialise()
 	if err != nil {
