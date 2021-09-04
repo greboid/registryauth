@@ -21,8 +21,7 @@ var (
 )
 
 func main() {
-	err := envflag.Parse()
-	if err != nil {
+	if err := envflag.Parse(); err != nil {
 		log.Fatalf("Unable to parse flags: %s", err.Error())
 	}
 	certPath, keyPath = certs.GetCertPaths(*dataDirectory)
