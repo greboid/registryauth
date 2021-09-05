@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/gorilla/mux"
@@ -16,16 +17,19 @@ import (
 )
 
 var (
-	ShowIndex    = flag.Bool("show-index", false, "Show an index page, rather than just a 200 response")
-	ShowListings = flag.Bool("show-listings", true, "Index page lists public repositories")
-	PullHostname = flag.String("pull-hostname", "", "Hostname to show on listings and info page, will default to the request hostname")
-	RegistryHost = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
+	ShowIndex       = flag.Bool("show-index", false, "Show an index page, rather than just a 200 response")
+	ShowListings    = flag.Bool("show-listings", true, "Index page lists public repositories")
+	PullHostname    = flag.String("pull-hostname", "", "Hostname to show on listings and info page, will default to the request hostname")
+	RegistryHost    = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
+	RefreshInterval = flag.Duration("refresh-interval", 60*time.Second, "The time between registry refreshes")
 )
 
 type Lister struct {
 	templates      *template.Template
 	TokenProvider  TokenProvider
 	PublicPrefixes []string
+	repositories   *RepositoryList
+	lastPoll       time.Time
 }
 
 type TokenProvider func(...string) (string, error)
@@ -46,6 +50,7 @@ type Catalog struct {
 type ListingIndex struct {
 	Title        string
 	Repositories *RepositoryList
+	LastPolled   time.Time
 }
 
 type Index struct {
@@ -61,17 +66,32 @@ func (s *Lister) Initialise(router *mux.Router) {
 				}
 				return strings.Join(input, ", ")
 			},
+			"DisplayTime": func(format time.Time) string {
+				return format.Format("02-01 15:04")
+			},
 		}).
 		ParseFS(templates, "templates/*.gohtml", "templates/*.css"))
 	if *ShowListings {
 		router.Path("/").HandlerFunc(s.ListingIndex)
 		router.Path("/css").HandlerFunc(s.CSS)
+		s.start()
 	} else if *ShowIndex {
 		router.Path("/").HandlerFunc(s.Index)
 		router.Path("/css").HandlerFunc(s.CSS)
 	} else {
 		router.Path("/").HandlerFunc(s.OK)
 	}
+}
+
+func (s *Lister) start() {
+	go func() {
+		s.repositories = s.getRepositories()
+		s.lastPoll = time.Now()
+		for range time.Tick(*RefreshInterval) {
+			s.repositories = s.getRepositories()
+			s.lastPoll = time.Now()
+		}
+	}()
 }
 
 func (s *Lister) CSS(writer http.ResponseWriter, _ *http.Request) {
@@ -103,11 +123,23 @@ func (s *Lister) Index(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
+	err := s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
+		Title:        s.getHostname(req),
+		Repositories: s.repositories,
+		LastPolled:   s.lastPoll,
+	})
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *Lister) getRepositories() *RepositoryList {
 	publicRepositories, err := s.getCatalog()
 	_, err = s.getRepoInfo("moo")
 	if err != nil {
 		log.Printf("Error: %s", err)
-		return
+		return nil
 	}
 	repositoryList := &RepositoryList{}
 	for index := range publicRepositories {
@@ -116,14 +148,7 @@ func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 			repositoryList.Repositories = append(repositoryList.Repositories, repoInfo)
 		}
 	}
-	err = s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
-		Title:        s.getHostname(req),
-		Repositories: repositoryList,
-	})
-	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	return repositoryList
 }
 
 func (s *Lister) getRepoInfo(repository string) (*Repository, error) {
