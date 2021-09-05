@@ -115,6 +115,7 @@ func (s *Server) getRepoInfo(repository string) (*Repository, error) {
 	if err != nil {
 		return nil, errors.New("unable to unmarshall response")
 	}
+	list.Name = repository
 	return list, nil
 }
 

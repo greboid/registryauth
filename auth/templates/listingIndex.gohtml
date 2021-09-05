@@ -22,7 +22,7 @@
         {{ range .Repositories.Repositories }}
             <tr>
                 <td>{{ .Name }}</td>
-                <td>{{ StringsJoin .Tags ", " }}</td>
+                <td>{{ TagPrint .Tags }}</td>
             </tr>
         {{ end }}
         </tbody>
