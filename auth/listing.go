@@ -30,6 +30,20 @@ type Index struct {
 	Title string
 }
 
+func (s *Server) CSS(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Add("Content-Type", "text/css")
+	err := s.templates.ExecuteTemplate(writer, "normalize.css", nil)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = s.templates.ExecuteTemplate(writer, "main.css", nil)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *Server) Index(writer http.ResponseWriter, req *http.Request) {
 	err := s.templates.ExecuteTemplate(writer, "index.gohtml", Index{
 		Title: getHostname(s, req),
