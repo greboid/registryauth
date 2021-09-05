@@ -54,20 +54,20 @@ func (s *Server) Index(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *Server) ListingIndex(writer http.ResponseWriter, _ *http.Request) {
+func (s *Server) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 	accessToken, err := s.GetFullAccessToken()
 	if err != nil {
 		log.Printf("Error: %s", err)
 		return
 	}
 	httpClient := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/v2/_catalog", s.Port), nil)
+	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/v2/_catalog", s.Port), nil)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	resp, err := httpClient.Do(req)
+	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	resp, err := httpClient.Do(getRequest)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
