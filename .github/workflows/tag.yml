@@ -20,7 +20,7 @@ jobs:
           separator: ' '
           fullname: 'false'
 
-      - name: Build image
+      - name: Build image (auth)
         id: build-image-auth
         uses: redhat-actions/buildah-build@v2.6.2
         with:
@@ -30,7 +30,7 @@ jobs:
           extra-args: >
             --timestamp
             0
-      - name: Push to GHCR
+      - name: Push to GHCR (auth)
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
           image: ${{ steps.build-image-auth.outputs.image }}
@@ -39,17 +39,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.tags.outputs.tags }}
 
-      - name: Build image
+      - name: Build image (authedreg)
         id: build-image-authedreg
         uses: redhat-actions/buildah-build@v2.6.2
         with:
-          dockerfiles: cmd/auth/Dockerfile
+          dockerfiles: cmd/authedreg/Dockerfile
           image: ${{ github.repository }}/authedreg
           tags: ${{ steps.tags.outputs.tags }}
           extra-args: >
             --timestamp
             0
-      - name: Push to GHCR
+      - name: Push to GHCR (authedreg)
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
           image: ${{ steps.build-image-authedreg.outputs.image }}
@@ -58,17 +58,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.tags.outputs.tags }}
 
-      - name: Build image
+      - name: Build image (genpass)
         id: build-image-genpass
         uses: redhat-actions/buildah-build@v2.6.2
         with:
-          dockerfiles: cmd/auth/Dockerfile
+          dockerfiles: cmd/genpass/Dockerfile
           image: ${{ github.repository }}/genpass
           tags: ${{ steps.tags.outputs.tags }}
           extra-args: >
             --timestamp
             0
-      - name: Push to GHCR
+      - name: Push to GHCR (genpass)
         uses: redhat-actions/push-to-registry@v2.3.1
         with:
           image: ${{ steps.build-image-genpass.outputs.image }}
