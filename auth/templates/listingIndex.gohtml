@@ -11,13 +11,22 @@
 <body>
 <section>
     <h1>{{.Title}}</h1>
-    <ul>
-        {{ range .Repositories }}
-            <li>
-                {{$.Title}}/{{ . }}
-            </li>
+    <table>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Tags</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range .Repositories.Repositories }}
+            <tr>
+                <td>{{ .Name }}</td>
+                <td>{{ StringsJoin .Tags ", " }}</td>
+            </tr>
         {{ end }}
-    </ul>
+        </tbody>
+    </table>
 </section>
 </body>
 </html>

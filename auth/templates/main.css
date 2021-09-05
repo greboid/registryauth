@@ -23,3 +23,28 @@ li {
     list-style-type: none;
     margin-bottom: 0.5rem;
 }
+
+table {
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    background-color: #746D75;
+    color: white;
+    padding: 0.5em 2em 0.5em 0.5em;
+}
+
+td {
+    text-align: left;
+    border-bottom: 1px solid black;
+    padding: 0.5em;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tr:hover {
+    background-color: #ddd;
+}

@@ -35,17 +35,12 @@ type Response struct {
 	Token   string `json:"token"`
 }
 
-func (s *Server) GetFullAccessToken() (string, error) {
+func (s *Server) GetFullAccessToken(repository ...string) (string, error) {
 	authRequest := &Request{
 		User:     "internal",
 		Password: "",
 		Service:  s.Service,
 		ApprovedScope: []*token.ResourceActions{
-			{
-				Type:    "repository",
-				Name:    "*",
-				Actions: []string{"*"},
-			},
 			{
 				Type:    "registry",
 				Name:    "catalog",
@@ -53,6 +48,13 @@ func (s *Server) GetFullAccessToken() (string, error) {
 			},
 		},
 		validCredentials: true,
+	}
+	for index := range repository {
+		authRequest.ApprovedScope = append(authRequest.ApprovedScope, &token.ResourceActions{
+			Type:    "repository",
+			Name:    repository[index],
+			Actions: []string{"*"},
+		})
 	}
 	authToken, err := authRequest.getResponseToken(s.publicKey, s.privateKey, s.Issuer)
 	if err != nil {

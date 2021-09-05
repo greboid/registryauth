@@ -55,7 +55,7 @@ func (s *Server) Initialise() error {
 	if err != nil {
 		return fmt.Errorf("loading certicates: %s", err.Error())
 	}
-	s.templates = template.Must(template.ParseFS(templates, "templates/*.gohtml", "templates/*.css"))
+	s.templates = template.Must(template.New("").Funcs(template.FuncMap{"StringsJoin": strings.Join}).ParseFS(templates, "templates/*.gohtml", "templates/*.css"))
 	if s.ShowListing {
 		s.Router.Path("/").HandlerFunc(s.ListingIndex)
 		s.Router.Path("/css").HandlerFunc(s.CSS)

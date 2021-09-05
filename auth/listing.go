@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -18,19 +19,28 @@ var (
 )
 
 type RepositoryList struct {
+	Repositories []*Repository
+}
+
+type Repository struct {
+	Name string
+	Tags []string
+}
+
+type Catalog struct {
 	Repositories []string `json:"repositories"`
 }
 
 type ListingIndex struct {
 	Title        string
-	Repositories []string
+	Repositories *RepositoryList
 }
 
 type Index struct {
 	Title string
 }
 
-func (s *Server) CSS(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) CSS(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Add("Content-Type", "text/css")
 	err := s.templates.ExecuteTemplate(writer, "normalize.css", nil)
 	if err != nil {
@@ -55,36 +65,85 @@ func (s *Server) Index(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) ListingIndex(writer http.ResponseWriter, req *http.Request) {
-	accessToken, err := s.GetFullAccessToken()
+	publicRepositories, err := s.getCatalog()
+	_, err = s.getRepoInfo("moo")
 	if err != nil {
 		log.Printf("Error: %s", err)
 		return
 	}
-	httpClient := http.Client{}
-	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/v2/_catalog", s.Port), nil)
+	repositoryList := &RepositoryList{}
+	for index := range publicRepositories {
+		repoInfo, err := s.getRepoInfo(publicRepositories[index])
+		if err == nil {
+			repositoryList.Repositories = append(repositoryList.Repositories, repoInfo)
+		}
+	}
+	err = s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
+		Title:        getHostname(s, req),
+		Repositories: repositoryList,
+	})
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+}
+
+func (s *Server) getRepoInfo(repository string) (*Repository, error) {
+	accessToken, err := s.GetFullAccessToken(repository)
+	if err != nil {
+		return nil, errors.New("error obtaining access token")
+	}
+	httpClient := http.Client{}
+	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/v2/%s/tags/list", s.Port, repository), nil)
+	if err != nil {
+		return nil, errors.New("error creating request")
 	}
 	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	resp, err := httpClient.Do(getRequest)
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+		return nil, errors.New("unable to perform request")
 	}
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+		return nil, errors.New("unable to read body")
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
-	list := &RepositoryList{}
+	list := &Repository{}
 	err = json.Unmarshal(listBody, list)
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+		return nil, errors.New("unable to unmarshall response")
+	}
+	return list, nil
+}
+
+func (s *Server) getCatalog() ([]string, error) {
+	accessToken, err := s.GetFullAccessToken()
+	if err != nil {
+		return nil, errors.New("error obtaining access token")
+	}
+	httpClient := http.Client{}
+	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d/v2/_catalog", s.Port), nil)
+	if err != nil {
+		return nil, errors.New("error creating request")
+	}
+	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	resp, err := httpClient.Do(getRequest)
+	if err != nil {
+		return nil, errors.New("unable to perform request")
+	}
+	listBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("unable to read body")
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	list := &Catalog{}
+	err = json.Unmarshal(listBody, list)
+	if err != nil {
+		return nil, errors.New("unable to unmarshall response")
 	}
 	var publicRepositories []string
 	for index := range list.Repositories {
@@ -96,14 +155,7 @@ func (s *Server) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 			publicRepositories = append(publicRepositories, list.Repositories[index])
 		}
 	}
-	err = s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
-		Title:        getHostname(s, req),
-		Repositories: publicRepositories,
-	})
-	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	return publicRepositories, nil
 }
 
 func getHostname(s *Server, req *http.Request) string {
