@@ -5,7 +5,6 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -37,10 +36,7 @@ type Server struct {
 	Port           int
 	Debug          bool
 	Router         *mux.Router
-	ShowIndex      bool
-	ShowListing    bool
-	templates      *template.Template
-	PullHostname   string
+	lister         *Lister
 }
 
 //go:embed templates
@@ -55,25 +51,11 @@ func (s *Server) Initialise() error {
 	if err != nil {
 		return fmt.Errorf("loading certicates: %s", err.Error())
 	}
-	s.templates = template.Must(template.New("").
-		Funcs(template.FuncMap{
-			"TagPrint": func(input []string) string {
-				if len(input) == 0 {
-					return "No Tags"
-				}
-				return strings.Join(input, ", ")
-			},
-		}).
-		ParseFS(templates, "templates/*.gohtml", "templates/*.css"))
-	if s.ShowListing {
-		s.Router.Path("/").HandlerFunc(s.ListingIndex)
-		s.Router.Path("/css").HandlerFunc(s.CSS)
-	} else if s.ShowIndex {
-		s.Router.Path("/").HandlerFunc(s.Index)
-		s.Router.Path("/css").HandlerFunc(s.CSS)
-	} else {
-		s.Router.Path("/").HandlerFunc(s.OK)
+	s.lister = &Lister{
+		TokenProvider:  s.GetFullAccessToken,
+		PublicPrefixes: s.PublicPrefixes,
 	}
+	s.lister.Initialise(s.Router)
 	s.Router.PathPrefix("/auth").HandlerFunc(s.HandleAuth).Methods(http.MethodPost, http.MethodGet)
 	return nil
 }
@@ -96,10 +78,6 @@ func (s *Server) StartAndWait() error {
 		return err
 	}
 	return nil
-}
-
-func (s *Server) OK(writer http.ResponseWriter, _ *http.Request) {
-	writer.WriteHeader(http.StatusOK)
 }
 
 func ParsePrefixes(prefixInput string) []string {
