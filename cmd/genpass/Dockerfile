@@ -1,4 +1,4 @@
-FROM registry.greboid.com/mirror/golang:latest as builder
+FROM reg.g5d.dev/golang@sha256:65e504b0cb4e5df85e2301f47cd3f231768d7b0d5aba59b1201e9c50fdf5e0ac as builder
 
 ENV USER=appuser
 ENV UID=10001
