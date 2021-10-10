@@ -19,7 +19,7 @@ func InitFormatter() {
 	if *Debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
-		log.SetLevel(log.ErrorLevel)
+		log.SetLevel(log.InfoLevel)
 	}
 	log.SetFormatter(Formatter{Debug: *Debug})
 }

@@ -72,13 +72,16 @@ func (s *Lister) Initialise(router *mux.Router) {
 		}).
 		ParseFS(templates, "templates/*.gohtml", "templates/*.css"))
 	if *ShowListings {
+		log.Infof("Enabling listings")
 		router.Path("/").HandlerFunc(s.ListingIndex)
 		router.Path("/css").HandlerFunc(s.CSS)
 		s.start()
 	} else if *ShowIndex {
+		log.Infof("Showing index only")
 		router.Path("/").HandlerFunc(s.Index)
 		router.Path("/css").HandlerFunc(s.CSS)
 	} else {
+		log.Infof("Not showing index or listings")
 		router.Path("/").HandlerFunc(s.OK)
 	}
 }
