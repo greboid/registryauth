@@ -24,6 +24,9 @@ func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, noti
 			"filesystem": configuration.Parameters{
 				"rootdirectory": directory,
 			},
+			"delete": configuration.Parameters{
+				"enable": true,
+			},
 		},
 		Auth: configuration.Auth{
 			"token": {
