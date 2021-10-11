@@ -153,7 +153,7 @@ func (s *Lister) getRepositories() *RepositoryList {
 		if err == nil {
 			repositoryList.Repositories = append(repositoryList.Repositories, repoInfo)
 		} else {
-			log.Info("Unable to update repository list: %s", err.Error())
+			log.Infof("Unable to update repository list: %s", err.Error())
 		}
 	}
 	return repositoryList
