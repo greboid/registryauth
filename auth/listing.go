@@ -88,11 +88,15 @@ func (s *Lister) Initialise(router *mux.Router) {
 
 func (s *Lister) start() {
 	go func() {
+		log.Infof("Refreshing repositories")
 		s.repositories = s.getRepositories()
 		s.lastPoll = time.Now()
+		log.Infof("Repository list refreshed")
 		for range time.Tick(*RefreshInterval) {
+			log.Infof("Refreshing repositories")
 			s.repositories = s.getRepositories()
 			s.lastPoll = time.Now()
+			log.Infof("Repository list refreshed")
 		}
 	}()
 }
@@ -148,6 +152,8 @@ func (s *Lister) getRepositories() *RepositoryList {
 		repoInfo, err := s.getRepoInfo(publicRepositories[index])
 		if err == nil {
 			repositoryList.Repositories = append(repositoryList.Repositories, repoInfo)
+		} else {
+			log.Info("Unable to update repository list: %s", err.Error())
 		}
 	}
 	return repositoryList
@@ -200,7 +206,7 @@ func (s *Lister) getCatalog() ([]string, error) {
 		return nil, errors.New("unable to perform request")
 	}
 	if resp.StatusCode != 200 {
-		return nil, errors.New("bad response code")
+		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
 	}
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
