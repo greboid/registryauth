@@ -105,10 +105,10 @@ func checkValid(certPath string, keyPath string) bool {
 	if err != nil {
 		return false
 	}
-	if !time.Now().After(x509Cert.NotAfter) {
+	if time.Now().After(x509Cert.NotAfter) {
 		return false
 	}
-	if !time.Now().Before(x509Cert.NotBefore) {
+	if time.Now().Before(x509Cert.NotBefore) {
 		return false
 	}
 	return true
