@@ -11,4 +11,5 @@ FROM gcr.io/distroless/static@sha256:07869abb445859465749913267a8c7b3b02dc4236fb
 COPY --from=builder --chown=65532:65532 /data /data
 
 COPY --from=builder /app/main /auth
+WORKDIR /
 CMD ["/auth"]
