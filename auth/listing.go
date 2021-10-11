@@ -139,7 +139,6 @@ func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 
 func (s *Lister) getRepositories() *RepositoryList {
 	publicRepositories, err := s.getCatalog()
-	_, err = s.getRepoInfo("moo")
 	if err != nil {
 		log.Printf("Error: %s", err)
 		return nil
@@ -199,6 +198,9 @@ func (s *Lister) getCatalog() ([]string, error) {
 	resp, err := httpClient.Do(getRequest)
 	if err != nil {
 		return nil, errors.New("unable to perform request")
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New("bad response code")
 	}
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
