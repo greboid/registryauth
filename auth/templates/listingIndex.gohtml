@@ -23,8 +23,12 @@
         {{ range .Repositories.Repositories }}
             <tr>
                 <td>{{ .Name }}</td>
-                <td>{{ TagPrint .Tags }} <span class="tagList">+/-</span>
-                    <div>{{ SHAPrint .Tags }}</div>
+                <td class="tags">{{ TagPrint .Tags }} <span class="tagList">+/-</span>
+                    {{ range .Tags }}
+                        <div>
+                            <span>{{.Name}}</span> - <span class="sha">{{ .SHA }}</span> <span class="copy">📋</span>
+                        </div>
+                    {{ end }}
                 </td>
             </tr>
         {{ end }}

@@ -44,6 +44,10 @@ td {
     padding: 0.5em;
 }
 
+td.tags {
+    width: 80ch;
+}
+
 td > div {
     display: none;
 }
