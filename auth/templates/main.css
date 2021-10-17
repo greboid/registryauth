@@ -48,6 +48,14 @@ td.tags {
     width: 80ch;
 }
 
+td.tags:hover {
+    cursor: pointer;
+}
+
+.copy:hover {
+    cursor: default;
+}
+
 td > div {
     display: none;
 }

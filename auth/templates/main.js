@@ -1,7 +1,4 @@
 document.addEventListener("click", (event) => {
-    if (event.target.classList.contains("tagList")) {
-        event.target.closest("td").classList.toggle("showinfo")
-    }
     if (event.target.classList.contains("copy")) {
         if (!navigator.clipboard) {
             console.log("Unable to copy")
@@ -11,9 +8,7 @@ document.addEventListener("click", (event) => {
         let registry = document.title
         navigator.clipboard.writeText(`${registry}/${tag}:${sha}`)
             .catch(e => console.log(`Error copying ${e}`))
+    } else if (event.target.closest("td").classList.contains("tags")) {
+        event.target.closest("td").classList.toggle("showinfo")
     }
 });
-
-const copyText = (text) => {
-
-};
