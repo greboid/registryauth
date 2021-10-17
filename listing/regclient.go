@@ -17,30 +17,44 @@ type DistributionRepository struct {
 	Tags []string `json:"tags"`
 }
 
-func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRepository, error) {
-	accessToken, err := tokenProvider(repository)
+func doRequest(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, error) {
+	accessToken, err := tokenProvider(repositories...)
 	if err != nil {
-		return nil, errors.New("error obtaining access token")
+		return nil, err
 	}
 	httpClient := http.Client{}
-	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", *RegistryHost, repository), nil)
+	getRequest, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		return nil, errors.New("error creating request")
+		return nil, err
 	}
 	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	getRequest.Header.Set("Accept", "application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json")
 	resp, err := httpClient.Do(getRequest)
-	if err != nil {
-		return nil, errors.New("unable to perform request")
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
 	}
+	return resp, nil
+}
+
+func doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) ([]byte, error) {
+	resp, err := doRequest(method, url, tokenProvider, repositories...)
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New("unable to read body")
+		return nil, err
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+	return listBody, nil
+}
+
+func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRepository, error) {
+	resp, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", *RegistryHost, repository), tokenProvider, repository)
+	if err != nil {
+		return nil, err
+	}
 	repo := &DistributionRepository{}
-	err = json.Unmarshal(listBody, repo)
+	err = json.Unmarshal(resp, repo)
 	if err != nil {
 		return nil, errors.New("unable to unmarshall response")
 	}
@@ -49,32 +63,12 @@ func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRe
 }
 
 func getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
-	accessToken, err := tokenProvider()
-	if err != nil {
-		return nil, errors.New("error obtaining access token")
-	}
-	httpClient := http.Client{}
-	getRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), nil)
-	if err != nil {
-		return nil, errors.New("error creating request")
-	}
-	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	resp, err := httpClient.Do(getRequest)
+	resp, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), tokenProvider)
 	if err != nil {
 		return nil, errors.New("unable to perform request")
 	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
-	}
-	listBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.New("unable to read body")
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
 	catalog := &Catalog{}
-	err = json.Unmarshal(listBody, catalog)
+	err = json.Unmarshal(resp, catalog)
 	if err != nil {
 		return nil, errors.New("unable to unmarshall response")
 	}
@@ -94,23 +88,5 @@ func getRepositorySHA(name, tag string, tokenProvider TokenProvider) (string, er
 }
 
 func getManifest(method, name, tag string, tokenProvider TokenProvider) (*http.Response, error) {
-	accessToken, err := tokenProvider(name)
-	if err != nil {
-		return nil, errors.New("error obtaining access token")
-	}
-	httpClient := http.Client{}
-	getRequest, err := http.NewRequest(method, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, name, tag), nil)
-	if err != nil {
-		return nil, errors.New("error creating request")
-	}
-	getRequest.Header.Set("Accept", "application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json")
-	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	resp, err := httpClient.Do(getRequest)
-	if err != nil {
-		return nil, errors.New("unable to perform request")
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
-	}
-	return resp, nil
+	return doRequest(method, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, name, tag), tokenProvider, name)
 }
