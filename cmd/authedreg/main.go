@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
+	"github.com/greboid/registryauth/listing"
 	"github.com/kouhin/envflag"
 	log "github.com/sirupsen/logrus"
 )
@@ -46,6 +47,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
+	lister := listing.NewLister(authServer.PublicPrefixes, authServer.GetFullAccessToken)
+	lister.Initialise(authServer.Router)
 	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *auth.Realm, *auth.Issuer, *auth.Service, certPath, *notifyEndpoint, *notifyToken))
 	log.Infof("Server started")
 	err = authServer.StartAndWait()

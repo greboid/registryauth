@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"embed"
 	"flag"
 	"fmt"
 	"net/http"
@@ -36,11 +35,7 @@ type Server struct {
 	Port           int
 	Debug          bool
 	Router         *mux.Router
-	lister         *Lister
 }
-
-//go:embed templates
-var templates embed.FS
 
 func (s *Server) Initialise() error {
 	err := certs.GenerateSelfSignedCert(s.CertPath, s.KeyPath)
@@ -51,11 +46,6 @@ func (s *Server) Initialise() error {
 	if err != nil {
 		return fmt.Errorf("loading certicates: %s", err.Error())
 	}
-	s.lister = &Lister{
-		TokenProvider:  s.GetFullAccessToken,
-		PublicPrefixes: s.PublicPrefixes,
-	}
-	s.lister.Initialise(s.Router)
 	s.Router.PathPrefix("/auth").HandlerFunc(s.HandleAuth).Methods(http.MethodPost, http.MethodGet)
 	return nil
 }

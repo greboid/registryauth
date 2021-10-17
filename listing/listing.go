@@ -1,6 +1,7 @@
-package auth
+package listing
 
 import (
+	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/gorilla/mux"
+	"github.com/greboid/registryauth/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,6 +24,9 @@ var (
 	RegistryHost    = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
 	RefreshInterval = flag.Duration("refresh-interval", 60*time.Second, "The time between registry refreshes")
 )
+
+//go:embed templates
+var templates embed.FS
 
 type Lister struct {
 	templates      *template.Template
@@ -66,7 +71,34 @@ type Index struct {
 	Title string
 }
 
+func NewLister(publicPrefixes []string, getFullToken func(repository ...string) (string, error)) *Lister {
+	lister := &Lister{
+		TokenProvider:  getFullToken,
+		PublicPrefixes: publicPrefixes,
+	}
+	return lister
+}
+
 func (s *Lister) Initialise(router *mux.Router) {
+	if *ShowListings {
+		log.Infof("Enabling listings")
+		s.getTemplates()
+		router.Path("/").HandlerFunc(s.ListingIndex)
+		router.Path("/css").HandlerFunc(s.CSS)
+		router.Path("/js").HandlerFunc(s.JS)
+		s.start()
+	} else if *ShowIndex {
+		log.Infof("Showing index only")
+		s.getTemplates()
+		router.Path("/").HandlerFunc(s.Index)
+		router.Path("/css").HandlerFunc(s.CSS)
+	} else {
+		log.Infof("Not showing index or listings")
+		router.Path("/").HandlerFunc(s.OK)
+	}
+}
+
+func (s *Lister) getTemplates() {
 	s.templates = template.Must(template.New("").
 		Funcs(template.FuncMap{
 			"TagPrint": func(input []Tag) string {
@@ -100,20 +132,6 @@ func (s *Lister) Initialise(router *mux.Router) {
 			},
 		}).
 		ParseFS(templates, "templates/*.gohtml", "templates/*.css", "templates/*.js"))
-	if *ShowListings {
-		log.Infof("Enabling listings")
-		router.Path("/").HandlerFunc(s.ListingIndex)
-		router.Path("/css").HandlerFunc(s.CSS)
-		router.Path("/js").HandlerFunc(s.JS)
-		s.start()
-	} else if *ShowIndex {
-		log.Infof("Showing index only")
-		router.Path("/").HandlerFunc(s.Index)
-		router.Path("/css").HandlerFunc(s.CSS)
-	} else {
-		log.Infof("Not showing index or listings")
-		router.Path("/").HandlerFunc(s.OK)
-	}
 }
 
 func (s *Lister) start() {
@@ -314,7 +332,7 @@ func (s *Lister) getCatalog() ([]string, error) {
 	}
 	var publicRepositories []string
 	for index := range list.Repositories {
-		if isScopePublic(s.PublicPrefixes, &token.ResourceActions{
+		if auth.IsScopePublic(s.PublicPrefixes, &token.ResourceActions{
 			Type:    "repository",
 			Name:    list.Repositories[index],
 			Actions: []string{"pull"},

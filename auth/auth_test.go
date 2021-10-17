@@ -568,7 +568,7 @@ func TestServer_isScopePublic(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isScopePublic(tt.PublicPrefixes, &token.ResourceActions{
+			if got := IsScopePublic(tt.PublicPrefixes, &token.ResourceActions{
 				Type: tt.scopeType,
 				Name: tt.scopeName,
 			}); got != tt.want {

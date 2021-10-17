@@ -184,7 +184,7 @@ func authenticate(users map[string]string, request *Request) bool {
 	return bcrypt.CompareHashAndPassword([]byte(password), []byte(request.Password)) == nil
 }
 
-func isScopePublic(publicPrefixes []string, scopeItem *token.ResourceActions) bool {
+func IsScopePublic(publicPrefixes []string, scopeItem *token.ResourceActions) bool {
 	if scopeItem.Type != "repository" {
 		return false
 	}
@@ -228,7 +228,7 @@ func sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials
 func authorise(publicPrefixes []string, request *Request) ([]*token.ResourceActions, error) {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
-		if scope := sanitiseScope(scopeItem, isScopePublic(publicPrefixes, scopeItem), request.validCredentials); scope != nil {
+		if scope := sanitiseScope(scopeItem, IsScopePublic(publicPrefixes, scopeItem), request.validCredentials); scope != nil {
 			log.Debugf("Approving scope: %s", scope)
 			approvedScopes = append(approvedScopes, scope)
 		}
