@@ -259,7 +259,7 @@ func (s *Lister) getTagSHA(repository *DistributionRepository, tag string) (stri
 		return "", errors.New("error obtaining access token")
 	}
 	httpClient := http.Client{}
-	getRequest, err := http.NewRequest(http.MethodHead, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, repository.Name, repository.Tags[0]), nil)
+	getRequest, err := http.NewRequest(http.MethodHead, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, repository.Name, tag), nil)
 	if err != nil {
 		return "", errors.New("error creating request")
 	}
