@@ -241,7 +241,7 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 	for index := range repository.Tags {
 		sha, err := s.getTagSHA(repository, repository.Tags[index])
 		if err != nil {
-			log.Printf("Unable to get digest for tag")
+			log.Printf("Unable to get digest for tag: %s", err.Error())
 			sha = "error"
 			continue
 		}
