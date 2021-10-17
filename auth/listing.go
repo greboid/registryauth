@@ -266,8 +266,8 @@ func (s *Lister) getTagSHA(repository *DistributionRepository, tag string) (stri
 	if err != nil {
 		return "", errors.New("error creating request")
 	}
-	getRequest.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	getRequest.Header.Set("Accept", "application/vnd.oci.image.manifest.v1+json")
+	getRequest.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	getRequest.Header.Add("Accept", "application/vnd.oci.image.manifest.v1+json")
 	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	resp, err := httpClient.Do(getRequest)
 	if err != nil {
