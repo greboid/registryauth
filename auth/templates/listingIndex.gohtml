@@ -7,6 +7,7 @@
     <link rel="icon" href="data:;base64,=">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/css">
+    <script defer src="/js"></script>
 </head>
 <body>
 <section>
@@ -22,7 +23,9 @@
         {{ range .Repositories.Repositories }}
             <tr>
                 <td>{{ .Name }}</td>
-                <td>{{ TagPrint .Tags }}</td>
+                <td>{{ TagPrint .Tags }} <span class="tagList">+/-</span>
+                    <div>{{ SHAPrint .Tags }}</div>
+                </td>
             </tr>
         {{ end }}
         </tbody>
