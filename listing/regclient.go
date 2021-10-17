@@ -17,6 +17,18 @@ type DistributionRepository struct {
 	Tags []string `json:"tags"`
 }
 
+type Manifest struct {
+	SHA    string
+	Size   int
+	Layers []Layer `json:"layers"`
+}
+
+type Layer struct {
+	MediaType string `json:"mediaType"`
+	Size      int    `json:"size"`
+	Digest    string `json:"digest"`
+}
+
 func doRequest(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, error) {
 	accessToken, err := tokenProvider(repositories...)
 	if err != nil {
@@ -36,25 +48,25 @@ func doRequest(method, url string, tokenProvider TokenProvider, repositories ...
 	return resp, nil
 }
 
-func doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) ([]byte, error) {
+func doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, []byte, error) {
 	resp, err := doRequest(method, url, tokenProvider, repositories...)
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
-	return listBody, nil
+	return resp, listBody, nil
 }
 
 func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRepository, error) {
-	resp, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", *RegistryHost, repository), tokenProvider, repository)
+	_, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", *RegistryHost, repository), tokenProvider, repository)
 	if err != nil {
 		return nil, err
 	}
 	repo := &DistributionRepository{}
-	err = json.Unmarshal(resp, repo)
+	err = json.Unmarshal(body, repo)
 	if err != nil {
 		return nil, errors.New("unable to unmarshall response")
 	}
@@ -63,30 +75,35 @@ func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRe
 }
 
 func getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
-	resp, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), tokenProvider)
+	_, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), tokenProvider)
 	if err != nil {
 		return nil, errors.New("unable to perform request")
 	}
 	catalog := &Catalog{}
-	err = json.Unmarshal(resp, catalog)
+	err = json.Unmarshal(body, catalog)
 	if err != nil {
 		return nil, errors.New("unable to unmarshall response")
 	}
 	return catalog, nil
 }
 
-func getRepositorySHA(name, tag string, tokenProvider TokenProvider) (string, error) {
-	resp, err := getManifest(http.MethodHead, name, tag, tokenProvider)
+func getRepositoryManifest(name, tag string, tokenProvider TokenProvider) (*Manifest, error) {
+	resp, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, name, tag), tokenProvider, name)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	sha := resp.Header.Get("Docker-Content-Digest")
 	if len(sha) == 0 {
-		return "", fmt.Errorf("no content digest specified")
+		return nil, fmt.Errorf("no content digest specified")
 	}
-	return sha, nil
-}
-
-func getManifest(method, name, tag string, tokenProvider TokenProvider) (*http.Response, error) {
-	return doRequest(method, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, name, tag), tokenProvider, name)
+	manifest := &Manifest{}
+	err = json.Unmarshal(body, manifest)
+	if err != nil {
+		return nil, errors.New("unable to unmarshall response")
+	}
+	manifest.SHA = sha
+	for index := range manifest.Layers {
+		manifest.Size += manifest.Layers[index].Size
+	}
+	return manifest, nil
 }

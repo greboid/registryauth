@@ -26,7 +26,9 @@
                 <td class="tags">{{ TagPrint .Tags }}
                     {{ range .Tags }}
                         <div>
-                            <span>{{.Name}}</span> - <span class="sha">{{ .SHA }}</span> <span class="copy">📋</span>
+                            <span>{{.Name}}</span> - <span class="sha">{{ .SHA }}</span>
+                            <span class="copy">📋</span>
+                            {{ .Size | HumanSize }}
                         </div>
                     {{ end }}
                 </td>

@@ -45,6 +45,7 @@ type Repository struct {
 type Tag struct {
 	Name string
 	SHA  string
+	Size int
 }
 
 type ListingIndex struct {
@@ -119,18 +120,20 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 		Name: repository.Name,
 	}
 	for index := range repository.Tags {
-		sha, err := getRepositorySHA(repository.Name, repository.Tags[index], s.TokenProvider)
+		manifest, err := getRepositoryManifest(repository.Name, repository.Tags[index], s.TokenProvider)
 		if err != nil {
-			log.Printf("Unable to get digest for tag: %s", err.Error())
+			log.Printf("Unable to get manifest for tag: %s", err.Error())
 			repo.Tags = append(repo.Tags, Tag{
 				Name: repository.Tags[index],
 				SHA:  "error",
+				Size: manifest.Size,
 			})
 			continue
 		}
 		repo.Tags = append(repo.Tags, Tag{
 			Name: repository.Tags[index],
-			SHA:  sha,
+			SHA:  manifest.SHA,
+			Size: manifest.Size,
 		})
 	}
 	return repo, nil

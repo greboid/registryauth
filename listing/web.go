@@ -1,6 +1,7 @@
 package listing
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -81,37 +82,44 @@ func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 func (s *Lister) getTemplates() {
 	s.templates = template.Must(template.New("").
 		Funcs(template.FuncMap{
-			"TagPrint": func(input []Tag) string {
-				if len(input) == 0 {
-					return "No Tags"
-				}
-				output := ""
-				for index := range input {
-					if index != 0 {
-						output += ", "
-					}
-					output += input[index].Name
-				}
-				return output
-			},
-			"SHAPrint": func(input []Tag) string {
-				if len(input) == 0 {
-					return "No Tags"
-				}
-				output := ""
-				for index := range input {
-					if index != 0 {
-						output += ", "
-					}
-					output += input[index].Name + " (" + input[index].SHA + ")"
-				}
-				return output
-			},
+			"TagPrint":  tagPrint,
+			"HumanSize": humanBytes,
 			"DisplayTime": func(format time.Time) string {
 				return format.Format("02-01 15:04")
 			},
 		}).
 		ParseFS(templates, "templates/*.gohtml", "templates/*.css", "templates/*.js"))
+}
+
+func tagPrint(input []Tag) string {
+	if len(input) == 0 {
+		return "No Tags"
+	}
+	output := ""
+	for index := range input {
+		if index > 4 {
+			output += ", ..."
+			break
+		}
+		if index != 0 {
+			output += ", "
+		}
+		output += input[index].Name + " (" + humanBytes(input[index].Size) + ")"
+	}
+	return output
+}
+
+func humanBytes(b int) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGTPE"[exp])
 }
 
 func (s *Lister) getHostname(req *http.Request) string {
