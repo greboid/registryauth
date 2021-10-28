@@ -22,7 +22,7 @@ jobs:
 
       - name: Build image (auth)
         id: build-image-auth
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/auth/Dockerfile
           image: ${{ github.repository }}/auth
@@ -41,7 +41,7 @@ jobs:
 
       - name: Build image (authedreg)
         id: build-image-authedreg
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/authedreg/Dockerfile
           image: ${{ github.repository }}/authedreg
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build image (genpass)
         id: build-image-genpass
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/genpass/Dockerfile
           image: ${{ github.repository }}/genpass
