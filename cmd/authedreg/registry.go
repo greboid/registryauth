@@ -19,6 +19,23 @@ import (
 )
 
 func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, notifyToken string) http.Handler {
+	config := getSharedConfig(directory)
+	config.Auth = configuration.Auth{
+		"token": {
+			"autoredirect":   true,
+			"realm":          realm,
+			"issuer":         issuer,
+			"service":        service,
+			"rootcertbundle": cert,
+		},
+	}
+	config.Notifications = configuration.Notifications{
+		Endpoints: getNotifyEndpoint(notifyEndpoint, notifyToken),
+	}
+	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
+}
+
+func getSharedConfig(directory string) *configuration.Configuration {
 	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"filesystem": configuration.Parameters{
@@ -28,21 +45,9 @@ func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, noti
 				"enabled": true,
 			},
 		},
-		Auth: configuration.Auth{
-			"token": {
-				"autoredirect":   true,
-				"realm":          realm,
-				"issuer":         issuer,
-				"service":        service,
-				"rootcertbundle": cert,
-			},
-		},
-		Notifications: configuration.Notifications{
-			Endpoints: getNotifyEndpoint(notifyEndpoint, notifyToken),
-		},
 	}
 	config.HTTP.Secret = fmt.Sprintf("%d", rand.Int63())
-	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
+	return config
 }
 
 func getNotifyEndpoint(endpoint string, token string) []configuration.Endpoint {
