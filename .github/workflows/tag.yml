@@ -22,7 +22,7 @@ jobs:
 
       - name: Build image (auth)
         id: build-image-auth
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/auth/Dockerfile
           image: ${{ github.repository }}/auth
@@ -31,7 +31,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (auth)
-        uses: redhat-actions/push-to-registry@v2.3.2
+        uses: redhat-actions/push-to-registry@v2.4
         with:
           image: ${{ steps.build-image-auth.outputs.image }}
           registry: ghcr.io
@@ -41,7 +41,7 @@ jobs:
 
       - name: Build image (authedreg)
         id: build-image-authedreg
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/authedreg/Dockerfile
           image: ${{ github.repository }}/authedreg
@@ -50,7 +50,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (authedreg)
-        uses: redhat-actions/push-to-registry@v2.3.2
+        uses: redhat-actions/push-to-registry@v2.4
         with:
           image: ${{ steps.build-image-authedreg.outputs.image }}
           registry: ghcr.io
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build image (genpass)
         id: build-image-genpass
-        uses: redhat-actions/buildah-build@v2.7
+        uses: redhat-actions/buildah-build@v2.8
         with:
           dockerfiles: cmd/genpass/Dockerfile
           image: ${{ github.repository }}/genpass
@@ -69,7 +69,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (genpass)
-        uses: redhat-actions/push-to-registry@v2.3.2
+        uses: redhat-actions/push-to-registry@v2.4
         with:
           image: ${{ steps.build-image-genpass.outputs.image }}
           registry: ghcr.io
