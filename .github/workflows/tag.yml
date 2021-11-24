@@ -31,7 +31,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (auth)
-        uses: redhat-actions/push-to-registry@v2.4
+        uses: redhat-actions/push-to-registry@v2.5
         with:
           image: ${{ steps.build-image-auth.outputs.image }}
           registry: ghcr.io
@@ -50,7 +50,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (authedreg)
-        uses: redhat-actions/push-to-registry@v2.4
+        uses: redhat-actions/push-to-registry@v2.5
         with:
           image: ${{ steps.build-image-authedreg.outputs.image }}
           registry: ghcr.io
@@ -69,7 +69,7 @@ jobs:
             --timestamp
             0
       - name: Push to GHCR (genpass)
-        uses: redhat-actions/push-to-registry@v2.4
+        uses: redhat-actions/push-to-registry@v2.5
         with:
           image: ${{ steps.build-image-genpass.outputs.image }}
           registry: ghcr.io
