@@ -4,11 +4,11 @@ import (
 	"flag"
 	"path/filepath"
 
+	"github.com/csmith/envflag"
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
 	"github.com/greboid/registryauth/listing"
-	"github.com/kouhin/envflag"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,9 +19,7 @@ var (
 )
 
 func main() {
-	if err := envflag.Parse(); err != nil {
-		log.Fatalf("Unable to parse flags: %s", err.Error())
-	}
+	envflag.Parse()
 	certPath, keyPath = certs.GetCertPaths(*dataDirectory)
 	auth.InitFormatter()
 	users, err := auth.ParseUsers(*auth.UserInput)
