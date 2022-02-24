@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
@@ -30,7 +31,7 @@ func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, noti
 		},
 	}
 	config.Notifications = configuration.Notifications{
-		Endpoints: getNotifyEndpoint(notifyEndpoint, notifyToken),
+		Endpoints: getNotifyEndpoints(notifyEndpoint, notifyToken),
 	}
 	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
 }
@@ -50,23 +51,44 @@ func getSharedConfig(directory string) *configuration.Configuration {
 	return config
 }
 
-func getNotifyEndpoint(endpoint string, token string) []configuration.Endpoint {
-	if endpoint == "" {
+func getNotifyEndpoints(endpoints string, tokens string) []configuration.Endpoint {
+	if endpoints == "" || tokens == "" {
 		return []configuration.Endpoint{}
+	}
+	var parsedEnpoints, parsedTokens []string
+	var result []configuration.Endpoint
+	if !strings.Contains(endpoints, ",") && !strings.Contains(tokens, ",") {
+		parsedEnpoints = []string{endpoints}
+		parsedTokens = []string{tokens}
+	} else {
+		parsedEnpoints = strings.Split(endpoints, ",")
+		parsedTokens = strings.Split(tokens, ",")
+		if len(parsedEnpoints) != len(parsedTokens) {
+			return []configuration.Endpoint{}
+		}
+	}
+	for index := range parsedEnpoints {
+		endpoint := getNotifyEndpoint(index, strings.TrimSpace(parsedEnpoints[index]), strings.TrimSpace(parsedTokens[index]))
+		result = append(result, endpoint)
+	}
+	return result
+}
+
+func getNotifyEndpoint(index int, endpoint string, token string) configuration.Endpoint {
+	if endpoint == "" || token == "" {
+		return configuration.Endpoint{}
 	}
 	_, err := url.Parse(endpoint)
 	if err != nil {
-		return []configuration.Endpoint{}
+		return configuration.Endpoint{}
 	}
-	return []configuration.Endpoint{
-		{
-			Name:      "notify",
-			Disabled:  false,
-			URL:       endpoint,
-			Headers:   http.Header{"Authorization": []string{"Bearer " + token}},
-			Timeout:   1 * time.Second,
-			Threshold: 5,
-			Backoff:   5 * time.Second,
-		},
+	return configuration.Endpoint{
+		Name:      fmt.Sprintf("notify%d", index),
+		Disabled:  false,
+		URL:       endpoint,
+		Headers:   http.Header{"Authorization": []string{"Bearer " + token}},
+		Timeout:   1 * time.Second,
+		Threshold: 5,
+		Backoff:   5 * time.Second,
 	}
 }
