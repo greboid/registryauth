@@ -23,6 +23,12 @@ func Test_getEndpoints(t *testing.T) {
 			want:      []configuration.Endpoint{},
 		},
 		{
+			name:      "Bad Endpoint",
+			endpoints: "http://test url.com",
+			tokens:    "token1",
+			want:      []configuration.Endpoint{},
+		},
+		{
 			name:      "Single endpoint, no token",
 			endpoints: "endpoint1",
 			tokens:    "",
@@ -30,8 +36,8 @@ func Test_getEndpoints(t *testing.T) {
 		},
 		{
 			name:      "no endpoint, single token",
-			endpoints: "endpoint1",
-			tokens:    "",
+			endpoints: "",
+			tokens:    "token1",
 			want:      []configuration.Endpoint{},
 		},
 		{
@@ -70,6 +76,29 @@ func Test_getEndpoints(t *testing.T) {
 				},
 				{
 					Name:      "notify1",
+					URL:       "endpoint2",
+					Headers:   http.Header{"Authorization": []string{"Bearer " + "token2"}},
+					Timeout:   1 * time.Second,
+					Threshold: 5,
+					Backoff:   5 * time.Second,
+				},
+			},
+		},
+		{
+			name:      "two endpoints, two tokens, blank middle",
+			endpoints: "endpoint1, , endpoint2",
+			tokens:    "token1, , token2",
+			want: []configuration.Endpoint{
+				{
+					Name:      "notify0",
+					URL:       "endpoint1",
+					Headers:   http.Header{"Authorization": []string{"Bearer " + "token1"}},
+					Timeout:   1 * time.Second,
+					Threshold: 5,
+					Backoff:   5 * time.Second,
+				},
+				{
+					Name:      "notify2",
 					URL:       "endpoint2",
 					Headers:   http.Header{"Authorization": []string{"Bearer " + "token2"}},
 					Timeout:   1 * time.Second,

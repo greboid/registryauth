@@ -52,11 +52,11 @@ func getSharedConfig(directory string) *configuration.Configuration {
 }
 
 func getNotifyEndpoints(endpoints string, tokens string) []configuration.Endpoint {
-	if endpoints == "" || tokens == "" {
-		return []configuration.Endpoint{}
+	var result = []configuration.Endpoint{}
+	if strings.TrimSpace(endpoints) == "" || strings.TrimSpace(tokens) == "" {
+		return result
 	}
 	var parsedEnpoints, parsedTokens []string
-	var result []configuration.Endpoint
 	if !strings.Contains(endpoints, ",") && !strings.Contains(tokens, ",") {
 		parsedEnpoints = []string{endpoints}
 		parsedTokens = []string{tokens}
@@ -68,27 +68,22 @@ func getNotifyEndpoints(endpoints string, tokens string) []configuration.Endpoin
 		}
 	}
 	for index := range parsedEnpoints {
-		endpoint := getNotifyEndpoint(index, strings.TrimSpace(parsedEnpoints[index]), strings.TrimSpace(parsedTokens[index]))
-		result = append(result, endpoint)
+		if strings.TrimSpace(parsedEnpoints[index]) == "" || strings.TrimSpace(parsedTokens[index]) == "" {
+			continue
+		}
+		_, err := url.Parse(parsedEnpoints[index])
+		if err != nil {
+			continue
+		}
+		result = append(result, configuration.Endpoint{
+			Name:      fmt.Sprintf("notify%d", index),
+			Disabled:  false,
+			URL:       strings.TrimSpace(parsedEnpoints[index]),
+			Headers:   http.Header{"Authorization": []string{"Bearer " + strings.TrimSpace(parsedTokens[index])}},
+			Timeout:   1 * time.Second,
+			Threshold: 5,
+			Backoff:   5 * time.Second,
+		})
 	}
 	return result
-}
-
-func getNotifyEndpoint(index int, endpoint string, token string) configuration.Endpoint {
-	if endpoint == "" || token == "" {
-		return configuration.Endpoint{}
-	}
-	_, err := url.Parse(endpoint)
-	if err != nil {
-		return configuration.Endpoint{}
-	}
-	return configuration.Endpoint{
-		Name:      fmt.Sprintf("notify%d", index),
-		Disabled:  false,
-		URL:       endpoint,
-		Headers:   http.Header{"Authorization": []string{"Bearer " + token}},
-		Timeout:   1 * time.Second,
-		Threshold: 5,
-		Backoff:   5 * time.Second,
-	}
 }
