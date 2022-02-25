@@ -50,6 +50,9 @@ func doRequest(method, url string, tokenProvider TokenProvider, repositories ...
 
 func doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, []byte, error) {
 	resp, err := doRequest(method, url, tokenProvider, repositories...)
+	if err != nil {
+		return nil, nil, err
+	}
 	listBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
