@@ -80,7 +80,7 @@ func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRe
 func getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
 	_, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), tokenProvider)
 	if err != nil {
-		return nil, errors.New("unable to perform request")
+		return nil, err
 	}
 	catalog := &Catalog{}
 	err = json.Unmarshal(body, catalog)
