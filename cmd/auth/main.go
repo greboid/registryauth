@@ -16,7 +16,6 @@ var (
 	dataDirectory = flag.String("data-dir", filepath.Join(".", "data"), "Data directory")
 	certPath      = ""
 	keyPath       = ""
-	RegistryHost  = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
 )
 
 func main() {
@@ -43,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
-	lister := listing.NewLister(*RegistryHost, authServer.PublicPrefixes, authServer.GetFullAccessToken)
+	lister := listing.NewLister(authServer.PublicPrefixes, authServer.GetFullAccessToken)
 	lister.Initialise(authServer.Router)
 	log.Infof("Server started")
 	err = authServer.StartAndWait()
