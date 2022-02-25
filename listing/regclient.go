@@ -29,7 +29,11 @@ type Layer struct {
 	Digest    string `json:"digest"`
 }
 
-func doRequest(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, error) {
+type RegClient struct {
+	host string
+}
+
+func (r *RegClient) doRequest(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, error) {
 	accessToken, err := tokenProvider(repositories...)
 	if err != nil {
 		return nil, err
@@ -48,8 +52,8 @@ func doRequest(method, url string, tokenProvider TokenProvider, repositories ...
 	return resp, nil
 }
 
-func doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, []byte, error) {
-	resp, err := doRequest(method, url, tokenProvider, repositories...)
+func (r *RegClient) doRequestWithBody(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, []byte, error) {
+	resp, err := r.doRequest(method, url, tokenProvider, repositories...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,8 +67,8 @@ func doRequestWithBody(method, url string, tokenProvider TokenProvider, reposito
 	return resp, listBody, nil
 }
 
-func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRepository, error) {
-	_, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", *RegistryHost, repository), tokenProvider, repository)
+func (r *RegClient) getTagList(repository string, tokenProvider TokenProvider) (*DistributionRepository, error) {
+	_, body, err := r.doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/tags/list", r.host, repository), tokenProvider, repository)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +81,8 @@ func getTagList(repository string, tokenProvider TokenProvider) (*DistributionRe
 	return repo, nil
 }
 
-func getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
-	_, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", *RegistryHost), tokenProvider)
+func (r *RegClient) getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
+	_, body, err := r.doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/_catalog", r.host), tokenProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +94,8 @@ func getCatalog(tokenProvider TokenProvider) (*Catalog, error) {
 	return catalog, nil
 }
 
-func getRepositoryManifest(name, tag string, tokenProvider TokenProvider) (*Manifest, error) {
-	resp, body, err := doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/manifests/%s", *RegistryHost, name, tag), tokenProvider, name)
+func (r *RegClient) getRepositoryManifest(name, tag string, tokenProvider TokenProvider) (*Manifest, error) {
+	resp, body, err := r.doRequestWithBody(http.MethodGet, fmt.Sprintf("%s/v2/%s/manifests/%s", r.host, name, tag), tokenProvider, name)
 	if err != nil {
 		return nil, err
 	}

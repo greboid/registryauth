@@ -16,7 +16,6 @@ var (
 	ShowIndex       = flag.Bool("show-index", false, "Show an index page, rather than just a 200 response")
 	ShowListings    = flag.Bool("show-listings", true, "Index page lists public repositories")
 	PullHostname    = flag.String("pull-hostname", "", "Hostname to show on listings and info page, will default to the request hostname")
-	RegistryHost    = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
 	RefreshInterval = flag.Duration("refresh-interval", 60*time.Second, "The time between registry refreshes")
 )
 
@@ -29,6 +28,7 @@ type Lister struct {
 	PublicPrefixes []string
 	repositories   *RepositoryList
 	lastPoll       time.Time
+	RegClient      RegClient
 }
 
 type TokenProvider func(...string) (string, error)
@@ -58,10 +58,13 @@ type Index struct {
 	Title string
 }
 
-func NewLister(publicPrefixes []string, getFullToken func(repository ...string) (string, error)) *Lister {
+func NewLister(host string, publicPrefixes []string, getFullToken func(repository ...string) (string, error)) *Lister {
 	lister := &Lister{
 		TokenProvider:  getFullToken,
 		PublicPrefixes: publicPrefixes,
+		RegClient: RegClient{
+			host: host,
+		},
 	}
 	return lister
 }
@@ -104,7 +107,7 @@ func (s *Lister) getRepositories() *RepositoryList {
 }
 
 func (s *Lister) getRepoInfo(repository string) (*Repository, error) {
-	distRepo, err := getTagList(repository, s.TokenProvider)
+	distRepo, err := s.RegClient.getTagList(repository, s.TokenProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +123,7 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 		Name: repository.Name,
 	}
 	for index := range repository.Tags {
-		manifest, err := getRepositoryManifest(repository.Name, repository.Tags[index], s.TokenProvider)
+		manifest, err := s.RegClient.getRepositoryManifest(repository.Name, repository.Tags[index], s.TokenProvider)
 		if err != nil {
 			log.Printf("Unable to get manifest for tag: %s", err.Error())
 			repo.Tags = append(repo.Tags, Tag{
@@ -140,7 +143,7 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 }
 
 func (s *Lister) getPublicRepositories() ([]string, error) {
-	catalog, err := getCatalog(s.TokenProvider)
+	catalog, err := s.RegClient.getCatalog(s.TokenProvider)
 	if err != nil {
 		return nil, err
 	}

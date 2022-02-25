@@ -25,6 +25,7 @@ var (
 	keyPath           = ""
 	GC                = flag.Bool("gc", false, "Run GC on the registry, ensure no other instances are running or are read only.")
 	dryRun            = flag.Bool("dry-run", false, "Perform a dry run of the GC")
+	RegistryHost      = flag.String("registry-host", "http://localhost:8080", "The URL of the registry being listed")
 )
 
 func main() {
@@ -39,7 +40,7 @@ func main() {
 }
 
 func runGC() {
-	config := getSharedConfig(*registryDirectory)
+	config := getSharedConfig(*registryDirectory, *RegistryHost)
 	driver, err := factory.Create(config.Storage.Type(), config.Storage.Parameters())
 	if err != nil {
 		log.Fatalf("failed to construct %s driver: %v", config.Storage.Type(), err)
@@ -86,9 +87,9 @@ func runReg() {
 	if err != nil {
 		log.Fatalf("Unable to %s", err.Error())
 	}
-	lister := listing.NewLister(authServer.PublicPrefixes, authServer.GetFullAccessToken)
+	lister := listing.NewLister(*RegistryHost, authServer.PublicPrefixes, authServer.GetFullAccessToken)
 	lister.Initialise(authServer.Router)
-	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *auth.Realm, *auth.Issuer, *auth.Service, certPath, *notifyEndpoint, *notifyToken))
+	authServer.Router.PathPrefix("/").Handler(StartRegistry(*registryDirectory, *auth.Realm, *auth.Issuer, *auth.Service, certPath, *RegistryHost, *notifyEndpoint, *notifyToken))
 	log.Infof("Server started")
 	err = authServer.StartAndWait()
 	if err != nil {

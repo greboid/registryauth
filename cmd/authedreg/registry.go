@@ -19,8 +19,8 @@ import (
 	_ "github.com/spf13/cobra"
 )
 
-func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, notifyToken string) http.Handler {
-	config := getSharedConfig(directory)
+func StartRegistry(directory, realm, issuer, service, cert, hostname, notifyEndpoint, notifyToken string) http.Handler {
+	config := getSharedConfig(directory, hostname)
 	config.Auth = configuration.Auth{
 		"token": {
 			"autoredirect":   true,
@@ -36,7 +36,7 @@ func StartRegistry(directory, realm, issuer, service, cert, notifyEndpoint, noti
 	return handlers.NewApp(dcontext.WithVersion(dcontext.Background(), version.Version), config)
 }
 
-func getSharedConfig(directory string) *configuration.Configuration {
+func getSharedConfig(directory, hostname string) *configuration.Configuration {
 	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"filesystem": configuration.Parameters{
@@ -47,6 +47,7 @@ func getSharedConfig(directory string) *configuration.Configuration {
 			},
 		},
 	}
+	config.HTTP.Host = hostname
 	config.HTTP.Secret = fmt.Sprintf("%d", rand.Int63())
 	return config
 }
