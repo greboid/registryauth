@@ -1,4 +1,4 @@
-FROM docker.io/golang@sha256:45d45a39258425b0386643efc863b3b3c1481173d64ec6151b18d48b565df9a0 AS builder
+FROM ghcr.io/greboid/dockerfiles/golang:latest as builder
 
 WORKDIR /app
 COPY . /app
