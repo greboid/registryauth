@@ -9,7 +9,21 @@ jobs:
   test:
     uses: greboid/.github/.github/workflows/checkout-and-test-go.yml@master
     secrets: inherit
-  container:
+  auth_container:
     uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
+    with:
+      dockerfile: 'cmd/auth/Dockerfile'
     secrets: inherit
-    needs: [test]
+    needs: [ test ]
+  reg_container:
+    uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
+    with:
+      dockerfile: 'cmd/authedreg/Dockerfile'
+    secrets: inherit
+    needs: [ auth_container ]
+  genpass_container:
+    uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
+    with:
+      dockerfile: 'cmd/genpass/Dockerfile'
+    secrets: inherit
+    needs: [ reg_container ]
