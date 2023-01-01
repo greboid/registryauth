@@ -13,17 +13,20 @@ jobs:
     uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
     with:
       dockerfile: 'cmd/auth/Dockerfile'
+      image: 'registryauth/auth'
     secrets: inherit
     needs: [ test ]
   reg_container:
     uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
     with:
       dockerfile: 'cmd/authedreg/Dockerfile'
+      image: 'registryauth/authedreg'
     secrets: inherit
-    needs: [ auth_container ]
+    needs: [ test ]
   genpass_container:
     uses: greboid/.github/.github/workflows/checkout-build-and-push-docker.yml@master
     with:
       dockerfile: 'cmd/genpass/Dockerfile'
+      image: 'registryauth/genpass'
     secrets: inherit
-    needs: [ reg_container ]
+    needs: [ test ]
