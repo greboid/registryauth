@@ -42,6 +42,9 @@ func doRequest(method, url string, tokenProvider TokenProvider, repositories ...
 	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	getRequest.Header.Set("Accept", "application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json")
 	resp, err := httpClient.Do(getRequest)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
 	}
