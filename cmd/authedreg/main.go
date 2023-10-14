@@ -8,7 +8,6 @@ import (
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	"github.com/docker/libtrust"
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
@@ -46,11 +45,7 @@ func runGC() {
 	}
 	ctx := dcontext.Background()
 	auth.InitFormatter()
-	k, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		log.Fatalf("error generating key: %s", err)
-	}
-	registry, err := storage.NewRegistry(ctx, driver, storage.Schema1SigningKey(k))
+	registry, err := storage.NewRegistry(ctx, driver)
 	if err != nil {
 		log.Fatalf("failed to construct registry: %v", err)
 	}

@@ -24,7 +24,7 @@ func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, i
 	claims := token.ClaimSet{
 		Issuer:     issuer,
 		Subject:    request.User,
-		Audience:   request.Service,
+		Audience:   []string{request.Service},
 		NotBefore:  now.Add(-1 * time.Minute).Unix(),
 		IssuedAt:   now.Unix(),
 		Expiration: now.Add(2 * time.Minute).Unix(),
@@ -47,7 +47,7 @@ func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, i
 	return fmt.Sprintf("%s%s%s", payload, token.TokenSeparator, joseBase64UrlEncode(sig)), nil
 }
 
-//Copied from libtrust
+// Copied from libtrust
 func joseBase64UrlEncode(b []byte) string {
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
 }
