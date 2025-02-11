@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/csmith/envflag v1.0.0
-	github.com/distribution/distribution/v3 v3.0.0-rc.2
+	github.com/distribution/distribution/v3 v3.0.0-rc.3
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
