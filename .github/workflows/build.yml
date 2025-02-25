@@ -16,13 +16,6 @@ jobs:
       image: 'greboid/registryauth/auth'
     secrets: inherit
     needs: [ test ]
-  reg_container:
-    uses: greboid/.github/.github/workflows/docker.yml@master
-    with:
-      dockerfile: 'cmd/authedreg/Dockerfile'
-      image: 'greboid/registryauth/authedreg'
-    secrets: inherit
-    needs: [ test ]
   genpass_container:
     uses: greboid/.github/.github/workflows/docker.yml@master
     with:
