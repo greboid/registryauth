@@ -1,12 +1,11 @@
 module github.com/greboid/registryauth
 
 go 1.23.0
-
-toolchain go1.24.0
+toolchain go1.24.1
 
 require (
 	github.com/csmith/envflag v1.0.0
-	github.com/distribution/distribution/v3 v3.0.0-rc.3
+	github.com/distribution/distribution/v3 v3.0.0-rc.4
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
