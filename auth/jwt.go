@@ -11,6 +11,7 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	log "github.com/sirupsen/logrus"
 )
 
 func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string, request *Request) (string, error) {
@@ -25,6 +26,12 @@ func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, i
 		Expiration: now.Add(2 * time.Minute).Unix(),
 		JWTID:      fmt.Sprintf("%d", rand.Int63()),
 		Access:     request.ApprovedScope,
+	}
+
+	log.Debugf("Creating token for user: %s, approved scopes: %d", request.User, len(request.ApprovedScope))
+	for i, scope := range request.ApprovedScope {
+		log.Debugf("  Scope %d - Type: %s, Name: %s, Class: %s, Actions: %v",
+			i+1, scope.Type, scope.Name, scope.Class, scope.Actions)
 	}
 
 	// Create a signer using the private key

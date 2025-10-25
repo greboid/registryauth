@@ -119,8 +119,15 @@ func parseRequest(users map[string]string, request *http.Request) *Request {
 	authRequest := &Request{}
 	authRequest.User, authRequest.Password = getAuth(request)
 	authRequest.Service = parseRequestService(request)
-	authRequest.RequestedScope = parseScope(parseRequestScope(request))
+	scopeString := parseRequestScope(request)
+	authRequest.RequestedScope = parseScope(scopeString)
 	authRequest.validCredentials = authenticate(users, authRequest)
+	log.Debugf("Auth request - User: %s, Service: %s, RawScope: %s, ValidCreds: %v",
+		authRequest.User, authRequest.Service, scopeString, authRequest.validCredentials)
+	for _, scope := range authRequest.RequestedScope {
+		log.Debugf("Requested scope - Type: %s, Name: %s, Class: %s, Actions: %v",
+			scope.Type, scope.Name, scope.Class, scope.Actions)
+	}
 	return authRequest
 }
 
@@ -213,15 +220,20 @@ func sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials
 		Actions: scope.Actions,
 	}
 	if validCredentials {
+		log.Debugf("Scope approved (valid creds) - Type: %s, Name: %s, Class: %s, Actions: %v",
+			newScope.Type, newScope.Name, newScope.Class, newScope.Actions)
 		return newScope
 	}
 	if !isPublic {
+		log.Debugf("Scope rejected (not public, no valid creds) - Type: %s, Name: %s", scope.Type, scope.Name)
 		return nil
 	}
 	if len(scope.Actions) > 1 || scope.Actions[0] != "pull" {
 		newScope.Actions = []string{"pull"}
+		log.Debugf("Scope restricted to pull (public, no creds) - Type: %s, Name: %s", scope.Type, scope.Name)
 		return newScope
 	}
+	log.Debugf("Scope approved (public pull) - Type: %s, Name: %s", scope.Type, scope.Name)
 	return newScope
 }
 
