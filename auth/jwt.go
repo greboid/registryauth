@@ -3,24 +3,19 @@ package auth
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/docker/libtrust"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string, request *Request) (string, error) {
 	now := time.Now()
-	header := token.Header{
-		Type:       "JWT",
-		SigningAlg: "RS256",
-		KeyID:      publicKey.KeyID(),
-	}
+
 	claims := token.ClaimSet{
 		Issuer:     issuer,
 		Subject:    request.User,
@@ -31,25 +26,33 @@ func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, i
 		JWTID:      fmt.Sprintf("%d", rand.Int63()),
 		Access:     request.ApprovedScope,
 	}
-	headerJson, err := json.Marshal(header)
-	if err != nil {
-		return "", err
-	}
-	claimsJson, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-	payload := fmt.Sprintf("%s%s%s", joseBase64UrlEncode(headerJson), token.TokenSeparator, joseBase64UrlEncode(claimsJson))
-	sig, _, err := privateKey.Sign(strings.NewReader(payload), 0)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s%s%s", payload, token.TokenSeparator, joseBase64UrlEncode(sig)), nil
-}
 
-// Copied from libtrust
-func joseBase64UrlEncode(b []byte) string {
-	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
+	// Create a signer using the private key
+	signerOpts := &jose.SignerOptions{}
+	signerOpts = signerOpts.WithType("JWT")
+	signerOpts = signerOpts.WithHeader("kid", publicKey.KeyID())
+
+	// Get the crypto private key from libtrust
+	cryptoPrivateKey := privateKey.CryptoPrivateKey()
+
+	signer, err := jose.NewSigner(jose.SigningKey{
+		Algorithm: jose.RS256,
+		Key:       cryptoPrivateKey,
+	}, signerOpts)
+	if err != nil {
+		return "", fmt.Errorf("failed to create signer: %w", err)
+	}
+
+	// Build and sign the token
+	builder := jwt.Signed(signer)
+	builder = builder.Claims(claims)
+
+	tokenString, err := builder.Serialize()
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize token: %w", err)
+	}
+
+	return tokenString, nil
 }
 
 func (s *Server) LoadCertAndKey(certFile string, keyFile string) error {
