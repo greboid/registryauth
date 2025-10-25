@@ -14,13 +14,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ClaimSetBodge v2 distribution doesn't support an array for distribution (v3 does)
+type ClaimSetBodge struct {
+	// Public claims
+	Issuer     string                   `json:"iss"`
+	Subject    string                   `json:"sub"`
+	Audience   string                   `json:"aud"`
+	Expiration int64                    `json:"exp"`
+	NotBefore  int64                    `json:"nbf"`
+	IssuedAt   int64                    `json:"iat"`
+	JWTID      string                   `json:"jti"`
+	Access     []*token.ResourceActions `json:"access"`
+}
+
 func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, issuer string, request *Request) (string, error) {
 	now := time.Now()
 
-	claims := token.ClaimSet{
+	claims := ClaimSetBodge{
 		Issuer:     issuer,
 		Subject:    request.User,
-		Audience:   []string{request.Service},
+		Audience:   request.Service,
 		NotBefore:  now.Add(-1 * time.Minute).Unix(),
 		IssuedAt:   now.Unix(),
 		Expiration: now.Add(2 * time.Minute).Unix(),
@@ -28,7 +41,7 @@ func CreateToken(publicKey libtrust.PublicKey, privateKey libtrust.PrivateKey, i
 		Access:     request.ApprovedScope,
 	}
 
-	log.Debugf("Creating token for user: %s, approved scopes: %d", request.User, len(request.ApprovedScope))
+	log.Debugf("Creating token for user: %s, audience: %s, approved scopes: %d", request.User, request.Service, len(request.ApprovedScope))
 	for i, scope := range request.ApprovedScope {
 		log.Debugf("  Scope %d - Type: %s, Name: %s, Class: %s, Actions: %v",
 			i+1, scope.Type, scope.Name, scope.Class, scope.Actions)
