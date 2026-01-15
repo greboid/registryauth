@@ -11,7 +11,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	golang.org/x/crypto v0.46.0
 	golang.org/x/term v0.38.0
 	gopkg.in/yaml.v2 v2.4.0
