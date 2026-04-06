@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/csmith/envflag v1.0.0
-	github.com/distribution/distribution/v3 v3.0.0
+	github.com/distribution/distribution/v3 v3.1.0
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/gorilla/handlers v1.5.2
