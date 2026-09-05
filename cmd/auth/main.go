@@ -4,7 +4,7 @@ import (
 	"flag"
 	"path/filepath"
 
-	"github.com/csmith/envflag"
+	"github.com/csmith/envflag/v2"
 	"github.com/gorilla/mux"
 	"github.com/greboid/registryauth/auth"
 	"github.com/greboid/registryauth/certs"
