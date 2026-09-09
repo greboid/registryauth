@@ -1,6 +1,6 @@
 module github.com/greboid/registryauth
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/csmith/envflag/v2 v2.0.0
@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/sirupsen/logrus v1.10.2
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
 )
