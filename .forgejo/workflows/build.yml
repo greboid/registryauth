@@ -26,9 +26,9 @@ jobs:
           audience: u:1:7f40f51e-e00a-4cc3-9b7d-56f0eff93aab
       - uses: actions/toolkit/docker-push@master
         with:
-          repository: registryauth/auth
+          repository: greboid/registryauth/auth
           file: cmd/auth/Dockerfile
       - uses: actions/toolkit/docker-push@master
         with:
-          repository: registryauth/genpass
+          repository: greboid/registryauth/genpass
           file: cmd/genpass/Dockerfile
