@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -56,12 +57,19 @@ func (s *Server) StartAndWait() error {
 		Addr:    fmt.Sprintf(":%d", s.Port),
 		Handler: panicHandler(s.Router),
 	}
+	serverErrors := make(chan error, 1)
 	go func() {
-		_ = server.ListenAndServe()
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+		}
 	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
-	<-stop
+	select {
+	case err := <-serverErrors:
+		return err
+	case <-stop:
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
@@ -72,8 +80,8 @@ func (s *Server) StartAndWait() error {
 
 func ParsePrefixes(prefixInput string) []string {
 	var prefixList []string
-	for _, prefix := range strings.Split(prefixInput, ",") {
-		prefixList = append(prefixList, prefix)
+	for prefix := range strings.SplitSeq(prefixInput, ",") {
+		prefixList = append(prefixList, strings.TrimSpace(prefix))
 	}
 	return prefixList
 }

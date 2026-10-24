@@ -28,11 +28,11 @@ func main() {
 	fmt.Print("Enter Password: ")
 	bytePassword, err := term.ReadPassword(syscall.Stdin)
 	if err != nil {
-		log.Printf("Unable to read password.")
+		log.Fatalf("Unable to read password: %s", err)
 	}
 	bytePassword, err = bcrypt.GenerateFromPassword(bytePassword, 7)
 	if err != nil {
-		log.Printf("Unable to generate password: %s", err)
+		log.Fatalf("Unable to generate password: %s", err)
 	}
 	fmt.Println()
 	fmt.Printf("%s\n", bytePassword)

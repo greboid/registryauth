@@ -38,7 +38,6 @@ func TestServer_Authorize(t *testing.T) {
 		publicPrefixes     []string
 		request            *Request
 		wantApprovedScopes []*token.ResourceActions
-		wantErr            bool
 	}{
 		{
 			name:           "ValidAuth-WantTest-IsPublic",
@@ -61,10 +60,9 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr: false,
 		},
 		{
-			name:           "ValidAuth-WantTest-IsPublic",
+			name:           "ValidAuth-WantTest-IsPublic-Pull",
 			publicPrefixes: []string{"test"},
 			request: &Request{
 				User: "greboid",
@@ -84,7 +82,6 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name:           "InvalidAuth-WantTest-IsPublic-Push",
@@ -107,7 +104,6 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name:           "InvalidAuth-WantTest-IsPublic-Pull",
@@ -130,7 +126,6 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name:           "ValidAuth-WantTest-NotPublic",
@@ -153,7 +148,6 @@ func TestServer_Authorize(t *testing.T) {
 					Actions: []string{"pull"},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name:           "InvalidAuth-WantTest-NotPublic",
@@ -170,16 +164,11 @@ func TestServer_Authorize(t *testing.T) {
 				validCredentials: false,
 			},
 			wantApprovedScopes: []*token.ResourceActions{},
-			wantErr:            false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotApprovedScopes, err := authorise(tt.publicPrefixes, tt.request)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("authorise() error = %#v, wantErr %#v", err, tt.wantErr)
-				return
-			}
+			gotApprovedScopes := authorise(tt.publicPrefixes, tt.request)
 			if !reflect.DeepEqual(gotApprovedScopes, tt.wantApprovedScopes) {
 				t.Errorf("parseScope() = %#+v, want %#+v", actionsToString(gotApprovedScopes), actionsToString(tt.wantApprovedScopes))
 			}

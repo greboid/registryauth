@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 type Catalog struct {
@@ -29,23 +30,25 @@ type Layer struct {
 	Digest    string `json:"digest"`
 }
 
+var registryClient = &http.Client{Timeout: 30 * time.Second}
+
 func doRequest(method, url string, tokenProvider TokenProvider, repositories ...string) (*http.Response, error) {
 	accessToken, err := tokenProvider(repositories...)
 	if err != nil {
 		return nil, err
 	}
-	httpClient := http.Client{}
 	getRequest, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	getRequest.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	getRequest.Header.Set("Accept", "application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json")
-	resp, err := httpClient.Do(getRequest)
+	resp, err := registryClient.Do(getRequest)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("bad response code: %d", resp.StatusCode)
 	}
 	return resp, nil

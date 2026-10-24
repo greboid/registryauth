@@ -67,30 +67,24 @@ func (s *Server) HandleAuth(writer http.ResponseWriter, request *http.Request) {
 	authRequest := parseRequest(s.Users, request)
 	err := authRequest.getApprovedScope(s.PublicPrefixes)
 	if err != nil {
-		request.Header.Set("WWW-authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
+		writer.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, s.Realm))
 		http.Error(writer, err.Error(), http.StatusUnauthorized)
 		return
 	}
 	jwtToken, err := authRequest.getToken(s.publicKey, s.privateKey, s.Issuer)
 	if err != nil {
 		http.Error(writer, "authorise failed", http.StatusInternalServerError)
+		return
 	}
 	_, _ = writer.Write(jwtToken)
 }
 
 func (r *Request) getApprovedScope(publicPrefixes []string) error {
 	if len(r.RequestedScope) > 0 {
-		approvedScope, err := authorise(publicPrefixes, r)
-		if err == nil {
-			r.ApprovedScope = approvedScope
-		} else {
-			log.Infof("authorise failed: %s", err)
-		}
-	} else {
-		if !r.validCredentials {
-			log.Infof("authenticate failed: %s", r.User)
-			return fmt.Errorf("authentication failed")
-		}
+		r.ApprovedScope = authorise(publicPrefixes, r)
+	} else if !r.validCredentials {
+		log.Infof("authenticate failed: %s", r.User)
+		return fmt.Errorf("authentication failed")
 	}
 	return nil
 }
@@ -165,8 +159,8 @@ func getAuth(request *http.Request) (string, string) {
 
 func parseScope(scopes string) []*token.ResourceActions {
 	resourceActions := make([]*token.ResourceActions, 0)
-	scopeParts := strings.Split(scopes, " ")
-	for _, scope := range scopeParts {
+	scopeParts := strings.SplitSeq(scopes, " ")
+	for scope := range scopeParts {
 		if !strings.ContainsRune(scope, ':') {
 			continue
 		}
@@ -237,7 +231,7 @@ func sanitiseScope(scope *token.ResourceActions, isPublic bool, validCredentials
 	return newScope
 }
 
-func authorise(publicPrefixes []string, request *Request) ([]*token.ResourceActions, error) {
+func authorise(publicPrefixes []string, request *Request) []*token.ResourceActions {
 	approvedScopes := make([]*token.ResourceActions, 0)
 	for _, scopeItem := range request.RequestedScope {
 		if scope := sanitiseScope(scopeItem, IsScopePublic(publicPrefixes, scopeItem), request.validCredentials); scope != nil {
@@ -245,5 +239,5 @@ func authorise(publicPrefixes []string, request *Request) ([]*token.ResourceActi
 			approvedScopes = append(approvedScopes, scope)
 		}
 	}
-	return approvedScopes, nil
+	return approvedScopes
 }

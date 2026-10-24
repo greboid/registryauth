@@ -4,6 +4,7 @@ import (
 	"embed"
 	"flag"
 	"html/template"
+	"sync/atomic"
 	"time"
 
 	"github.com/distribution/distribution/v3/registry/auth/token"
@@ -27,8 +28,17 @@ type Lister struct {
 	templates      *template.Template
 	TokenProvider  TokenProvider
 	PublicPrefixes []string
-	repositories   *RepositoryList
-	lastPoll       time.Time
+	// snapshot holds the latest poll result; written by the refresher goroutine, read by handlers.
+	snapshot atomic.Value
+}
+
+type listingSnapshot struct {
+	repositories *RepositoryList
+	lastPoll     time.Time
+}
+
+func (s *Lister) storeSnapshot(repositories *RepositoryList) {
+	s.snapshot.Store(listingSnapshot{repositories: repositories, lastPoll: time.Now()})
 }
 
 type TokenProvider func(...string) (string, error)
@@ -73,13 +83,13 @@ func (s *Lister) Initialise(router *mux.Router) {
 func (s *Lister) start() {
 	go func() {
 		log.Infof("Refreshing repositories")
-		s.repositories = s.getRepositories()
-		s.lastPoll = time.Now()
+		s.storeSnapshot(s.getRepositories())
 		log.Infof("Repository list refreshed")
-		for range time.Tick(*RefreshInterval) {
+		ticker := time.NewTicker(*RefreshInterval)
+		defer ticker.Stop()
+		for range ticker.C {
 			log.Infof("Refreshing repositories")
-			s.repositories = s.getRepositories()
-			s.lastPoll = time.Now()
+			s.storeSnapshot(s.getRepositories())
 			log.Infof("Repository list refreshed")
 		}
 	}()
@@ -126,7 +136,6 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 			repo.Tags = append(repo.Tags, Tag{
 				Name: repository.Tags[index],
 				SHA:  "error",
-				Size: manifest.Size,
 			})
 			continue
 		}

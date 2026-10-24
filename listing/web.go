@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -67,10 +68,21 @@ func (s *Lister) Index(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
+	snapshot, _ := s.snapshot.Load().(listingSnapshot)
+	if snapshot.repositories == nil {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		err := s.templates.ExecuteTemplate(writer, "unavailable.gohtml", Index{
+			Title: s.getHostname(req),
+		})
+		if err != nil {
+			log.Printf("Unable to output template: %s", err)
+		}
+		return
+	}
 	err := s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
 		Title:        s.getHostname(req),
-		Repositories: s.repositories,
-		LastPolled:   s.lastPoll,
+		Repositories: snapshot.repositories,
+		LastPolled:   snapshot.lastPoll,
 	})
 	if err != nil {
 		log.Printf("Unable to output template: %s", err)
@@ -95,18 +107,18 @@ func tagPrint(input []Tag) string {
 	if len(input) == 0 {
 		return "No Tags"
 	}
-	output := ""
+	var output strings.Builder
 	for index := range input {
 		if index > 4 {
-			output += ", ..."
+			output.WriteString(", ...")
 			break
 		}
 		if index != 0 {
-			output += ", "
+			output.WriteString(", ")
 		}
-		output += input[index].Name + " (" + humanBytes(input[index].Size) + ")"
+		output.WriteString(input[index].Name + " (" + humanBytes(input[index].Size) + ")")
 	}
-	return output
+	return output.String()
 }
 
 func humanBytes(b int) string {
