@@ -3,7 +3,7 @@
 Provides token based authentication for a registry server allowing public read access to select resources whilst
 restricting write access and read access to any resources not exposed publicly.
 
-There are three binaries available for building and containers published for all.
+There are two binaries available for building and containers published for both.
 
 ### Common configuration
 
@@ -11,37 +11,29 @@ There are three binaries available for building and containers published for all
 |-------------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | -port             | PORT             | Server port to listen on, defaults to 8080                                                                                                                                                    |
 | -public           | PUBLIC           | comma separated list of prefixes that will be public, a leading slash is not required, except if you want the entire registry to be public, set this to `/`                                   |
-| -users            | USERS            | json list list of users if using in compose append a pipe after the env var and put a user per line you'll need to double the dollar symbols to escape them ie `username:$$crypted$$password` |
+| -users            | USERS            | yaml map of users, if using in compose append a pipe after the env var and put a user per line you'll need to double the dollar symbols to escape them ie `username:$$crypted$$password`      |
 | -realm            | REALM            | Realm for the registry                                                                                                                                                                        |
 | -issuer           | ISSUER           | Issuer for the registry                                                                                                                                                                       |
 | -service          | SERVICE          | Service for the registry                                                                                                                                                                      |
-| -data-dir         | DATA_DIR         | Data directory for storing certificates and registry data (if required)                                                                                                                       |
+| -data-dir         | DATA_DIR         | Data directory for storing certificates                                                                                                                                                       |
 | -cert-dir         | CERT_DIR         | Directory for storing the generated certificates, by default this will be [DATA_DIR]/certs                                                                                                    |
 
 There is also support for showing a basic registry listing, this can be configured with the below settings.
 
-The self-contained registry will show these on the index page, the auth component will add them to the root of wherever
-this is being served, so you'll likely want to add some proxy rules to accommodate this.
+The auth component serves these at the root of wherever it is being hosted, so you'll likely want to add some proxy
+rules to accommodate this.
 
 | CLI Flag          | Env Var          | Description                                                                                                   | 
 |-------------------|------------------|---------------------------------------------------------------------------------------------------------------|
 | -show-index       | SHOW_INDEX       | Show's a basic index page rather than an empty page                                                           |
 | -show-listings    | SHOW_LISTINGS    | Index page lists all public repositories (does not require -show-index)                                       |
 | -registry-host    | REGISTRY_HOST    | The full URL of the registry to be listed                                                                     | 
-| -refresh-interval | REFRESH_INTERVAL | Time between refreshes of the internal registry. This is [go duration](https://pkg.go.dev/time#ParseDuration) |
+| -refresh-interval | REFRESH_INTERVAL | Time between refreshes of the registry listing. This is [go duration](https://pkg.go.dev/time#ParseDuration) |
 
 ### Generating passwords
 
 The passwords are bcrypted, and can be generated with the genpass command, this takes no arguments and will output the
 crypted version of the entered password.
-
-### Self Contained
-
-The self-contained option does need to be given a path for the registry data
-
-| CLI Flag      | Environment variable | Description                                                            |
-|---------------|----------------------|------------------------------------------------------------------------|
-| -registry-dir | REGISTRY_DIR         | Path to the registry data, by default this will be [DATA_DIR]/registry |
 
 ### Auth component
 
