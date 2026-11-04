@@ -24,6 +24,7 @@ jobs:
       - uses: actions/toolkit/docker-login@master
         with:
           audience: u:1:7f40f51e-e00a-4cc3-9b7d-56f0eff93aab
+          ghcr: ${{ secrets.GHCR_TOKEN }}
       - uses: actions/toolkit/docker-push@master
         with:
           repository: greboid/registryauth/auth
@@ -32,3 +33,5 @@ jobs:
         with:
           repository: greboid/registryauth/genpass
           file: cmd/genpass/Dockerfile
+          ghcr: true
+
