@@ -29,9 +29,11 @@ jobs:
         with:
           repository: greboid/registryauth/auth
           file: cmd/auth/Dockerfile
+          ghcr: true
+          ghcr-repository: greboid/registryauth/auth
       - uses: actions/toolkit/docker-push@master
         with:
           repository: greboid/registryauth/genpass
           file: cmd/genpass/Dockerfile
           ghcr: true
-
+          ghcr-repository: greboid/registryauth/genpass
