@@ -77,6 +77,12 @@ tr:hover {
     background-color: #ddd;
 }
 
+.session {
+    position: absolute;
+    top: 0.5em;
+    right: 1em;
+}
+
 footer {
     display: flex;
     justify-content: center;

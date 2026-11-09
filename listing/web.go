@@ -16,20 +16,47 @@ func (s *Lister) addRoutes(router *mux.Router) {
 	if *ShowListings {
 		log.Infof("Enabling listings")
 		s.getTemplates()
-		router.Path("/").HandlerFunc(s.ListingIndex)
+		router.Path("/").HandlerFunc(s.page(s.ListingIndex))
 		router.Path("/css").HandlerFunc(s.CSS)
 		router.Path("/js").HandlerFunc(s.JS)
-		router.PathPrefix("/").HandlerFunc(s.RepositoryDetails).Methods(http.MethodGet, http.MethodHead)
+		router.PathPrefix("/").HandlerFunc(s.page(s.RepositoryDetails)).Methods(http.MethodGet, http.MethodHead)
 		s.start()
 	} else if *ShowIndex {
 		log.Infof("Showing index only")
 		s.getTemplates()
-		router.Path("/").HandlerFunc(s.Index)
+		router.Path("/").HandlerFunc(s.page(s.Index))
 		router.Path("/css").HandlerFunc(s.CSS)
 	} else {
 		log.Infof("Not showing index or listings")
 		router.Path("/").HandlerFunc(s.OK)
 	}
+}
+
+func (s *Lister) page(next http.HandlerFunc) http.HandlerFunc {
+	if s.Login == nil {
+		return next
+	}
+	return s.Login.Protect(next)
+}
+
+func (s *Lister) session(req *http.Request) Session {
+	if s.Login == nil {
+		return Session{}
+	}
+	return Session{LoginEnabled: true, User: s.Login.User(req), ReturnTo: req.URL.RequestURI()}
+}
+
+func (s *Lister) visibleRepositories(repositories *RepositoryList, session Session) *RepositoryList {
+	if !session.LoginEnabled || session.User != "" {
+		return repositories
+	}
+	visible := &RepositoryList{}
+	for index := range repositories.Repositories {
+		if repositories.Repositories[index].Public {
+			visible.Repositories = append(visible.Repositories, repositories.Repositories[index])
+		}
+	}
+	return visible
 }
 
 func (s *Lister) JS(writer http.ResponseWriter, _ *http.Request) {
@@ -61,7 +88,8 @@ func (s *Lister) OK(writer http.ResponseWriter, _ *http.Request) {
 
 func (s *Lister) Index(writer http.ResponseWriter, req *http.Request) {
 	err := s.templates.ExecuteTemplate(writer, "index.gohtml", Index{
-		Title: s.getHostname(req),
+		Title:   s.getHostname(req),
+		Session: s.session(req),
 	})
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -72,7 +100,8 @@ func (s *Lister) Index(writer http.ResponseWriter, req *http.Request) {
 func (s *Lister) unavailable(writer http.ResponseWriter, req *http.Request) {
 	writer.WriteHeader(http.StatusServiceUnavailable)
 	err := s.templates.ExecuteTemplate(writer, "unavailable.gohtml", Index{
-		Title: s.getHostname(req),
+		Title:   s.getHostname(req),
+		Session: s.session(req),
 	})
 	if err != nil {
 		log.Printf("Unable to output template: %s", err)
@@ -85,8 +114,10 @@ func (s *Lister) RepositoryDetails(writer http.ResponseWriter, req *http.Request
 		s.unavailable(writer, req)
 		return
 	}
+	session := s.session(req)
+	repositories := s.visibleRepositories(snapshot.repositories, session).Repositories
 	name := strings.Trim(req.URL.Path, "/")
-	index := slices.IndexFunc(snapshot.repositories.Repositories, func(repository *Repository) bool {
+	index := slices.IndexFunc(repositories, func(repository *Repository) bool {
 		return repository.Name == name
 	})
 	if index == -1 {
@@ -95,8 +126,9 @@ func (s *Lister) RepositoryDetails(writer http.ResponseWriter, req *http.Request
 	}
 	err := s.templates.ExecuteTemplate(writer, "repository.gohtml", RepositoryDetails{
 		Title:      s.getHostname(req),
-		Repository: snapshot.repositories.Repositories[index],
+		Repository: repositories[index],
 		LastPolled: snapshot.lastPoll,
+		Session:    session,
 	})
 	if err != nil {
 		log.Printf("Unable to output template: %s", err)
@@ -109,10 +141,12 @@ func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 		s.unavailable(writer, req)
 		return
 	}
+	session := s.session(req)
 	err := s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{
 		Title:        s.getHostname(req),
-		Repositories: snapshot.repositories,
+		Repositories: s.visibleRepositories(snapshot.repositories, session),
 		LastPolled:   snapshot.lastPoll,
+		Session:      session,
 	})
 	if err != nil {
 		log.Printf("Unable to output template: %s", err)

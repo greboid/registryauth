@@ -11,6 +11,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func TestMain(m *testing.M) {
+	registry := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/v2/_catalog" {
+			_, _ = writer.Write([]byte(`{"repositories":["public/test","private/secret"]}`))
+			return
+		}
+		_, _ = writer.Write([]byte(`{"tags":[]}`))
+	}))
+	defer registry.Close()
+	// Set once, as pollers started by tests read it from background goroutines.
+	*RegistryHost = registry.URL
+	m.Run()
+}
+
 func TestListingIndexAvailability(t *testing.T) {
 	lister := NewLister(nil, nil)
 	lister.getTemplates()
@@ -280,4 +294,153 @@ func TestListingIndexConcurrentRefreshAndRender(t *testing.T) {
 		}
 	}()
 	wg.Wait()
+}
+
+type fakeLogin struct {
+	user    string
+	blocked bool
+}
+
+func (f *fakeLogin) User(*http.Request) string { return f.user }
+
+func (f *fakeLogin) Protect(next http.HandlerFunc) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if f.blocked {
+			writer.WriteHeader(http.StatusFound)
+			return
+		}
+		next(writer, request)
+	}
+}
+
+func listerWithLogin(login Login) *Lister {
+	lister := NewLister([]string{"public"}, nil)
+	lister.Login = login
+	lister.getTemplates()
+	lister.storeSnapshot(&RepositoryList{Repositories: []*Repository{
+		{Name: "public/test", Public: true},
+		{Name: "private/secret"},
+	}})
+	return lister
+}
+
+func TestLister_privateRepositoryVisibility(t *testing.T) {
+	tests := []struct {
+		name           string
+		user           string
+		wantDetailCode int
+		wantVisible    bool
+		wantSessionUI  string
+	}{
+		{
+			name:           "anonymous",
+			user:           "",
+			wantDetailCode: http.StatusNotFound,
+			wantVisible:    false,
+			wantSessionUI:  `/oidc/login?return=%2fprivate%2fsecret`,
+		},
+		{
+			name:           "logged in",
+			user:           "alice",
+			wantDetailCode: http.StatusOK,
+			wantVisible:    true,
+			wantSessionUI:  `action="/oidc/logout"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lister := listerWithLogin(&fakeLogin{user: tt.user})
+
+			index := httptest.NewRecorder()
+			lister.ListingIndex(index, httptest.NewRequest(http.MethodGet, "/private/secret", nil))
+			if !strings.Contains(index.Body.String(), "public/test") {
+				t.Error("public repository missing from index")
+			}
+			if strings.Contains(index.Body.String(), "private/secret\"") != tt.wantVisible {
+				t.Errorf("ListingIndex() private repository visible, want %t: %s", tt.wantVisible, index.Body.String())
+			}
+			if !strings.Contains(index.Body.String(), tt.wantSessionUI) {
+				t.Errorf("ListingIndex() body = %s, want to contain %q", index.Body.String(), tt.wantSessionUI)
+			}
+
+			details := httptest.NewRecorder()
+			lister.RepositoryDetails(details, httptest.NewRequest(http.MethodGet, "/private/secret", nil))
+			if details.Code != tt.wantDetailCode {
+				t.Errorf("RepositoryDetails() code = %v, want %v", details.Code, tt.wantDetailCode)
+			}
+		})
+	}
+}
+
+func TestLister_noSessionUIWithoutLogin(t *testing.T) {
+	lister := NewLister(nil, nil)
+	lister.getTemplates()
+	lister.storeSnapshot(&RepositoryList{})
+	writer := httptest.NewRecorder()
+	lister.ListingIndex(writer, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(writer.Body.String(), "/oidc/") {
+		t.Errorf("login UI shown with login disabled: %s", writer.Body.String())
+	}
+}
+
+func TestLister_protectedRoutes(t *testing.T) {
+	lister := NewLister(nil, func(...string) (string, error) { return "", errors.New("no token") })
+	lister.Login = &fakeLogin{blocked: true}
+	router := mux.NewRouter()
+	lister.Initialise(router)
+
+	tests := []struct {
+		name     string
+		path     string
+		wantCode int
+	}{
+		{
+			name:     "Index",
+			path:     "/",
+			wantCode: http.StatusFound,
+		},
+		{
+			name:     "Repository",
+			path:     "/public/test",
+			wantCode: http.StatusFound,
+		},
+		{
+			name:     "CSS",
+			path:     "/css",
+			wantCode: http.StatusOK,
+		},
+		{
+			name:     "JS",
+			path:     "/js",
+			wantCode: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer := httptest.NewRecorder()
+			router.ServeHTTP(writer, httptest.NewRequest(http.MethodGet, tt.path, nil))
+			if writer.Code != tt.wantCode {
+				t.Errorf("ServeHTTP() code = %v, want %v", writer.Code, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestLister_getRepositories(t *testing.T) {
+	tokens := func(...string) (string, error) { return "token", nil }
+
+	anonymous := NewLister([]string{"public"}, tokens).getRepositories()
+	if len(anonymous.Repositories) != 1 || anonymous.Repositories[0].Name != "public/test" {
+		t.Errorf("expected only public repository without login, got %+v", anonymous.Repositories)
+	}
+
+	lister := NewLister([]string{"public"}, tokens)
+	lister.Login = &fakeLogin{}
+	withLogin := lister.getRepositories()
+	if len(withLogin.Repositories) != 2 {
+		t.Fatalf("expected both repositories with login, got %+v", withLogin.Repositories)
+	}
+	if !withLogin.Repositories[0].Public || withLogin.Repositories[1].Public {
+		t.Errorf("repositories marked incorrectly: %+v, %+v", withLogin.Repositories[0], withLogin.Repositories[1])
+	}
 }

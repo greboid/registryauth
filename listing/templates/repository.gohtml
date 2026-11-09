@@ -10,6 +10,7 @@
     <script defer src="/js"></script>
 </head>
 <body>
+{{ template "session" .Session }}
 <section>
     <h1>{{.Title}}/{{.Repository.Name}}</h1>
     <p><a href="/">All repositories</a></p>

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"flag"
 	"html/template"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -28,6 +29,7 @@ type Lister struct {
 	templates      *template.Template
 	TokenProvider  TokenProvider
 	PublicPrefixes []string
+	Login          Login
 	// snapshot holds the latest poll result; written by the refresher goroutine, read by handlers.
 	snapshot atomic.Value
 }
@@ -43,13 +45,25 @@ func (s *Lister) storeSnapshot(repositories *RepositoryList) {
 
 type TokenProvider func(...string) (string, error)
 
+type Login interface {
+	User(request *http.Request) string
+	Protect(next http.HandlerFunc) http.HandlerFunc
+}
+
+type Session struct {
+	LoginEnabled bool
+	User         string
+	ReturnTo     string
+}
+
 type RepositoryList struct {
 	Repositories []*Repository
 }
 
 type Repository struct {
-	Name string
-	Tags []Tag
+	Name   string
+	Public bool
+	Tags   []Tag
 }
 
 type Tag struct {
@@ -62,16 +76,19 @@ type ListingIndex struct {
 	Title        string
 	Repositories *RepositoryList
 	LastPolled   time.Time
+	Session      Session
 }
 
 type RepositoryDetails struct {
 	Title      string
 	Repository *Repository
 	LastPolled time.Time
+	Session    Session
 }
 
 type Index struct {
-	Title string
+	Title   string
+	Session Session
 }
 
 func NewLister(publicPrefixes []string, getFullToken func(repository ...string) (string, error)) *Lister {
@@ -102,14 +119,14 @@ func (s *Lister) start() {
 }
 
 func (s *Lister) getRepositories() *RepositoryList {
-	publicRepositories, err := s.getPublicRepositories()
+	repositoryNames, err := s.getRepositoryNames()
 	if err != nil {
 		log.Printf("Error: %s", err)
 		return nil
 	}
 	repositoryList := &RepositoryList{}
-	for index := range publicRepositories {
-		repoInfo, err := s.getRepoInfo(publicRepositories[index])
+	for index := range repositoryNames {
+		repoInfo, err := s.getRepoInfo(repositoryNames[index])
 		if err == nil {
 			repositoryList.Repositories = append(repositoryList.Repositories, repoInfo)
 		} else {
@@ -133,7 +150,8 @@ func (s *Lister) getRepoInfo(repository string) (*Repository, error) {
 
 func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repository, error) {
 	repo := &Repository{
-		Name: repository.Name,
+		Name:   repository.Name,
+		Public: s.isPublic(repository.Name),
 	}
 	for index := range repository.Tags {
 		manifest, err := getRepositoryManifest(repository.Name, repository.Tags[index], s.TokenProvider)
@@ -154,20 +172,24 @@ func (s *Lister) getTaggedRepository(repository *DistributionRepository) (*Repos
 	return repo, nil
 }
 
-func (s *Lister) getPublicRepositories() ([]string, error) {
+func (s *Lister) isPublic(repository string) bool {
+	return auth.IsScopePublic(s.PublicPrefixes, &token.ResourceActions{
+		Type:    "repository",
+		Name:    repository,
+		Actions: []string{"pull"},
+	})
+}
+
+func (s *Lister) getRepositoryNames() ([]string, error) {
 	catalog, err := getCatalog(s.TokenProvider)
 	if err != nil {
 		return nil, err
 	}
-	var publicRepositories []string
+	var names []string
 	for index := range catalog.Repositories {
-		if auth.IsScopePublic(s.PublicPrefixes, &token.ResourceActions{
-			Type:    "repository",
-			Name:    catalog.Repositories[index],
-			Actions: []string{"pull"},
-		}) {
-			publicRepositories = append(publicRepositories, catalog.Repositories[index])
+		if s.Login != nil || s.isPublic(catalog.Repositories[index]) {
+			names = append(names, catalog.Repositories[index])
 		}
 	}
-	return publicRepositories, nil
+	return names, nil
 }

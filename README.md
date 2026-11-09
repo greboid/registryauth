@@ -31,6 +31,30 @@ tags, digests and sizes.
 | -registry-host    | REGISTRY_HOST    | The full URL of the registry to be listed                                                                     | 
 | -refresh-interval | REFRESH_INTERVAL | Time between refreshes of the registry listing. This is [go duration](https://pkg.go.dev/time#ParseDuration) |
 
+### Logging in to the UI
+
+The UI can log users in via OIDC. Logged-in users also see private repositories, and anonymous visitors only see public
+ones unless `-require-login` is set. This does not affect registry clients, which continue to use `-users`.
+
+Register a confidential client with your provider using the redirect URI `<external url>/oidc/callback`. The provider
+must include a `groups` claim in the ID token when the `groups` scope is requested. If you use a proxy, `/oidc/` needs to
+be routed to the auth component.
+
+| CLI Flag            | Env Var            | Description                                                                                  |
+|---------------------|--------------------|----------------------------------------------------------------------------------------------|
+| -oidc-issuer        | OIDC_ISSUER        | Issuer URL of the OIDC provider, login is disabled if this is not set                         |
+| -oidc-client-id     | OIDC_CLIENT_ID     | OIDC client ID                                                                               |
+| -oidc-client-secret | OIDC_CLIENT_SECRET | OIDC client secret                                                                           |
+| -oidc-external-url  | OIDC_EXTERNAL_URL  | Public base URL of the UI, ie `https://registry.example.com`                                 |
+| -oidc-group         | OIDC_GROUP         | Only users with this group in their `groups` claim can log in                                |
+| -require-login      | REQUIRE_LOGIN      | Require login for all UI pages, `/auth`, `/css` and `/js` remain accessible without a login  |
+
+Sessions last 12 hours and are held in memory, so restarting the server logs everyone out. Group membership is only
+checked at login. Logging out ends the session here but not at the provider.
+
+With login enabled the listing polls private repositories as well as public ones, so that they can be shown to
+logged-in users.
+
 ### Generating passwords
 
 The passwords are bcrypted, and can be generated with the genpass command, this takes no arguments and will output the

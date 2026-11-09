@@ -1,0 +1,14 @@
+{{- define "session" -}}
+{{- if .LoginEnabled }}
+<div class="session">
+    {{- if .User }}
+    <form method="post" action="/oidc/logout">
+        <span>{{ .User }}</span>
+        <button type="submit">Log out</button>
+    </form>
+    {{- else }}
+    <a href="/oidc/login?return={{ .ReturnTo }}">Log in</a>
+    {{- end }}
+</div>
+{{- end -}}
+{{- end -}}
