@@ -21,8 +21,8 @@
         </thead>
         <tbody>
         {{ range .Repositories.Repositories }}
-            <tr>
-                <td>{{ .Name }}</td>
+            <tr data-image="{{ .Name }}">
+                <td><a href="/{{ .Name }}">{{ .Name }}</a></td>
                 <td class="tags">{{ TagPrint .Tags }}
                     {{ range .Tags }}
                         <div>

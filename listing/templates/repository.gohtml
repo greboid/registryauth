@@ -1,0 +1,43 @@
+{{- /*gotype: github.com/greboid/registryauth/listing.RepositoryDetails*/ -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:;base64,=">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/css">
+    <script defer src="/js"></script>
+</head>
+<body>
+<section>
+    <h1>{{.Title}}/{{.Repository.Name}}</h1>
+    <p><a href="/">All repositories</a></p>
+    <table>
+        <thead>
+        <tr>
+            <th>Tag</th>
+            <th>Digest</th>
+            <th>Size</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range .Repository.Tags }}
+            <tr data-image="{{ $.Repository.Name }}">
+                <td>{{ .Name }}</td>
+                <td><span class="sha">{{ .SHA }}</span> <span class="copy">📋</span></td>
+                <td>{{ .Size | HumanSize }}</td>
+            </tr>
+        {{ else }}
+            <tr>
+                <td colspan="3">No Tags</td>
+            </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</section>
+<footer>
+    <p>Last polled: {{ DisplayTime .LastPolled }}</p>
+</footer>
+</body>
+</html>

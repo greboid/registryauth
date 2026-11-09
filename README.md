@@ -21,7 +21,8 @@ There are two binaries available for building and containers published for both.
 There is also support for showing a basic registry listing, this can be configured with the below settings.
 
 The auth component serves these at the root of wherever it is being hosted, so you'll likely want to add some proxy
-rules to accommodate this.
+rules to accommodate this. With listings enabled each public repository also has a page at `/<repository>`, showing its
+tags, digests and sizes.
 
 | CLI Flag          | Env Var          | Description                                                                                                   | 
 |-------------------|------------------|---------------------------------------------------------------------------------------------------------------|

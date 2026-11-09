@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ func (s *Lister) addRoutes(router *mux.Router) {
 		router.Path("/").HandlerFunc(s.ListingIndex)
 		router.Path("/css").HandlerFunc(s.CSS)
 		router.Path("/js").HandlerFunc(s.JS)
+		router.PathPrefix("/").HandlerFunc(s.RepositoryDetails).Methods(http.MethodGet, http.MethodHead)
 		s.start()
 	} else if *ShowIndex {
 		log.Infof("Showing index only")
@@ -67,16 +69,44 @@ func (s *Lister) Index(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (s *Lister) unavailable(writer http.ResponseWriter, req *http.Request) {
+	writer.WriteHeader(http.StatusServiceUnavailable)
+	err := s.templates.ExecuteTemplate(writer, "unavailable.gohtml", Index{
+		Title: s.getHostname(req),
+	})
+	if err != nil {
+		log.Printf("Unable to output template: %s", err)
+	}
+}
+
+func (s *Lister) RepositoryDetails(writer http.ResponseWriter, req *http.Request) {
+	snapshot, _ := s.snapshot.Load().(listingSnapshot)
+	if snapshot.repositories == nil {
+		s.unavailable(writer, req)
+		return
+	}
+	name := strings.Trim(req.URL.Path, "/")
+	index := slices.IndexFunc(snapshot.repositories.Repositories, func(repository *Repository) bool {
+		return repository.Name == name
+	})
+	if index == -1 {
+		http.NotFound(writer, req)
+		return
+	}
+	err := s.templates.ExecuteTemplate(writer, "repository.gohtml", RepositoryDetails{
+		Title:      s.getHostname(req),
+		Repository: snapshot.repositories.Repositories[index],
+		LastPolled: snapshot.lastPoll,
+	})
+	if err != nil {
+		log.Printf("Unable to output template: %s", err)
+	}
+}
+
 func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 	snapshot, _ := s.snapshot.Load().(listingSnapshot)
 	if snapshot.repositories == nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
-		err := s.templates.ExecuteTemplate(writer, "unavailable.gohtml", Index{
-			Title: s.getHostname(req),
-		})
-		if err != nil {
-			log.Printf("Unable to output template: %s", err)
-		}
+		s.unavailable(writer, req)
 		return
 	}
 	err := s.templates.ExecuteTemplate(writer, "listingIndex.gohtml", ListingIndex{

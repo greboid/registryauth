@@ -4,7 +4,7 @@ document.addEventListener("click", (event) => {
             console.log("Unable to copy")
         }
         let sha = event.target.previousElementSibling.textContent.trim()
-        let image = event.target.closest('tr').children[0].textContent.trim()
+        let image = event.target.closest('tr').dataset.image
         let registry = document.title.trim()
         navigator.clipboard.writeText(`${registry}/${image}@${sha}`)
             .catch(e => console.log(`Error copying ${e}`))

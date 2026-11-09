@@ -64,6 +64,12 @@ type ListingIndex struct {
 	LastPolled   time.Time
 }
 
+type RepositoryDetails struct {
+	Title      string
+	Repository *Repository
+	LastPolled time.Time
+}
+
 type Index struct {
 	Title string
 }
