@@ -17,20 +17,28 @@
         <thead>
         <tr>
             <th>Tag</th>
+            <th>Pull</th>
             <th>Digest</th>
             <th>Size</th>
         </tr>
         </thead>
         <tbody>
         {{ range .Repository.Tags }}
-            <tr data-image="{{ $.Repository.Name }}">
+            <tr>
                 <td>{{ .Name }}</td>
-                <td><span class="sha">{{ .SHA }}</span> <span class="copy">📋</span></td>
+                <td>
+                    <code class="ref">{{ $.Title }}/{{ $.Repository.Name }}:{{ .Name }}</code>
+                    <span class="copy" data-ref="{{ $.Title }}/{{ $.Repository.Name }}:{{ .Name }}">📋</span>
+                </td>
+                <td>
+                    <span class="sha" title="{{ .SHA }}">{{ ShortDigest .SHA }}</span>
+                    {{ if ne .SHA "error" }}<span class="copy" data-ref="{{ $.Title }}/{{ $.Repository.Name }}@{{ .SHA }}">📋</span>{{ end }}
+                </td>
                 <td>{{ .Size | HumanSize }}</td>
             </tr>
         {{ else }}
             <tr>
-                <td colspan="3">No Tags</td>
+                <td colspan="4">No Tags</td>
             </tr>
         {{ end }}
         </tbody>

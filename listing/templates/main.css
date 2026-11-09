@@ -56,6 +56,11 @@ td.tags:hover {
     cursor: default;
 }
 
+.ref {
+    -webkit-user-select: all;
+    user-select: all;
+}
+
 td > div {
     display: none;
 }

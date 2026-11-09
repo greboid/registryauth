@@ -124,8 +124,9 @@ func (s *Lister) ListingIndex(writer http.ResponseWriter, req *http.Request) {
 func (s *Lister) getTemplates() {
 	s.templates = template.Must(template.New("").
 		Funcs(template.FuncMap{
-			"TagPrint":  tagPrint,
-			"HumanSize": humanBytes,
+			"TagPrint":    tagPrint,
+			"HumanSize":   humanBytes,
+			"ShortDigest": shortDigest,
 			"DisplayTime": func(format time.Time) string {
 				return format.Format("02-01 15:04")
 			},
@@ -149,6 +150,15 @@ func tagPrint(input []Tag) string {
 		output.WriteString(input[index].Name + " (" + humanBytes(input[index].Size) + ")")
 	}
 	return output.String()
+}
+
+func shortDigest(digest string) string {
+	const hexLength = 12
+	algorithm, hex, found := strings.Cut(digest, ":")
+	if !found || len(hex) <= hexLength {
+		return digest
+	}
+	return algorithm + ":" + hex[:hexLength]
 }
 
 func humanBytes(b int) string {
